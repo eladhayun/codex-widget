@@ -1,0 +1,27 @@
+# Swift / Xcode build products and local package state
+.build/
+.swiftpm/
+build/
+DerivedData/
+*.app/
+*.dSYM/
+*.xcresult/
+
+# Per-user IDE and macOS state
+.DS_Store
+*.xcuserstate
+xcuserdata/
+*.swp
+*.swo
+
+# Local diagnostics, credentials, and environment overrides
+artifacts/
+*.log
+.codex/
+.env
+.env.*
+!.env.example
+auth.json
+*.pem
+*.p12
+*.mobileprovision

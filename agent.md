@@ -1,0 +1,151 @@
+# Codex Widget — maintainer and agent guide
+
+## Project and scope
+
+This repository builds a personal native macOS menu bar app that monitors Codex token activity and ChatGPT-plan quotas. Repository: `https://github.com/eladhayun/codex-widget` (private), default branch `main`.
+
+The app uses the existing local Codex login. It has no backend, API key configuration, model calls, desktop WidgetKit extension, launch-at-login support, or App Store distribution. Do not add these features implicitly when maintaining the monitor.
+
+The user explicitly chose a menu bar app for their own Mac. Later design requests replaced the original text status item with an icon and adopted the supplied Claude terminal screenshots as a visual reference. It still monitors **Codex**, not Claude.
+
+## Build, run, and test
+
+Work from the repository root. Requires macOS 14+, Swift 5.9+ for the package, and Xcode 16+ for the synchronized-folder Xcode project. Development was verified with Xcode 27 / Swift 6.4 and Codex CLI 0.155.1 on Apple Silicon.
+
+```sh
+make help
+make test
+make build
+make check
+make open
+```
+
+- `make test` runs the Swift Package Manager XCTest targets, including offscreen native view renders.
+- `make build` compiles a release executable, assembles `build/Codex Widget.app`, copies `Resources/Info.plist`, and ad-hoc signs it with `codesign --sign -`.
+- `make check` runs the executable's `--check` diagnostic mode. It reads account/usage information without creating a model task. It prints availability, daily bucket dates, and the local rolling total when needed; it does not print account identifiers or credentials.
+- `make open` builds and opens the application. To launch an existing build without recompiling, use `open "build/Codex Widget.app"`.
+
+The installed workspace's absolute launch command is:
+
+```sh
+open "/path/to/codex-widget/build/Codex Widget.app"
+```
+
+Double-clicking the bundle in Finder also works. The executable inside `Contents/MacOS/CodexWidget` can run directly, but opening the app bundle is the normal user workflow. Look for the terminal icon in the menu bar; there is no Dock icon (`LSUIElement=true`). Quit from the panel. The app can be copied to Applications manually. It is not notarized.
+
+Open `CodexWidget.xcodeproj` for Xcode development. Its synchronized `Sources` folder compiles the core and UI into one app module. SwiftPM compiles `UsageCore` separately, so UI files use conditional `canImport(UsageCore)` imports. Keep both build paths working.
+
+```sh
+xcodebuild -project CodexWidget.xcodeproj -scheme CodexWidget \
+  -configuration Debug -destination 'platform=macOS,arch=arm64' \
+  -derivedDataPath build/Xcode build
+```
+
+The development machine has emitted unrelated CoreSimulator/CoreDevice compatibility warnings; macOS builds still succeeded. Swift/Xcode cache writes, GUI launches, and Git metadata writes may need normal sandbox escalation. Do not alter system tools or credentials to work around those restrictions.
+
+## Source map
+
+| File | Responsibility |
+| --- | --- |
+| `Sources/CodexWidget/CodexWidgetApp.swift` | Entry point, diagnostic mode, app delegate, menu bar icon, Settings window |
+| `Sources/CodexWidget/UsageStore.swift` | Main-actor observable state, refresh loop, account changes, stale state, local fallback selection |
+| `Sources/CodexWidget/UsagePanel.swift` | Terminal-style tabs, quota bars, reset-time bar, activity grid, shared panel layout |
+| `Sources/UsageCore/CodexClient.swift` | App-server process, JSON-line transport, handshake, request timeouts, notifications, shutdown |
+| `Sources/UsageCore/UsageModels.swift` | Account/quota/token decoding, formatting, UTC daily matching, reset calculations |
+| `Sources/UsageCore/LocalUsageReader.swift` | Rolling 24-hour token counter from local session logs |
+| `Tests/UsageCoreTests/` | Protocol, model, quota, and local-log tests |
+| `Tests/WidgetTests/` | Store lifecycle/fallback tests and native panel renders |
+| `Resources/Info.plist` | Bundle identifier, version, executable, minimum macOS, menu-bar-only behavior |
+| `Makefile`, `Package.swift`, `CodexWidget.xcodeproj/` | Build and packaging entry points |
+
+## UI requirements to preserve
+
+- Menu bar: a monochrome `terminal` SF Symbol only. Do not put quota numbers or usage text back in the menu bar label.
+- Panel: 440-point width, dark terminal background, monospace type, lavender top rule and selected tabs. It intentionally remains dark in light and dark macOS appearances.
+- Tabs: Status, Usage (initial selection), and Stats.
+- All tab contents participate in a top-aligned `ZStack`; only the selected tab is visible, interactive, enabled, and exposed to accessibility. The largest content sets the panel height, so switching tabs does not resize it. The footer stays in place. Height can respond to changed data, but must not depend on selected tab.
+- Status shows app version, connection, login method, plan, email, last update, and refresh cadence. Do not invent current conversation/session metadata.
+- Usage shows today's reported tokens or the local last-24-hours fallback, lifetime tokens, and all returned quota windows.
+- Quota bars show **percent used**, not percent remaining. They are rectangular lavender bars, 14 points high, with a 72-point trailing percentage label and a 9-point gap.
+- Weekly windows (`windowDurationMins == 10080`) have a separate **Time until reset** bar. It must match the usage bar's height and width. Its fill is the remaining fraction of the time window, and decreases toward reset. Keep the absolute reset text and relative countdown in addition to the bar.
+- Stats uses purple/lavender consistently for the Overview highlight, activity grid, legend, All time label, and metric values. Orange remains a warning color, not a Stats accent.
+- Stats shows a 26-week daily UTC activity grid plus lifetime tokens, peak daily tokens, longest turn, and streaks when supplied. Hover text distinguishes missing reports from reported zero. Do not invent model breakdowns, session counts, costs, or other Claude-specific fields from the reference screenshots.
+- Refresh, Settings, and Quit remain available in the footer.
+
+## Account data and transport
+
+The app launches its own `codex app-server --stdio` child process and exchanges newline-delimited JSON over pipes. It sends `initialize` with client metadata, then `initialized`, before issuing account requests.
+
+Read-only monitor methods:
+
+- `account/read`: signed-in account type, email, plan.
+- `account/rateLimits/read`: quota windows, used percentages, durations, reset timestamps.
+- `account/usage/read`: account token summary and optional date-only daily buckets.
+
+Listen for `account/updated` and `account/rateLimits/updated`. A quota notification triggers a full read because a notification may contain only one bucket. Account changes clear old account data; a revision counter prevents applying results from a refresh interrupted by an account-change notification.
+
+The client correlates integer request IDs, uses 20-second default request timeouts, limits buffered response data, and fails pending requests when disconnected. It rejects unsupported server-initiated requests. It never approves tool execution or provides auth tokens. Stopping closes pipes and terminates its own child process. Do not kill unrelated Codex processes when restarting the widget.
+
+Executable lookup order: a nonempty Settings override (must be executable), `/opt/homebrew/bin/codex`, `/usr/local/bin/codex`, `/Applications/Codex.app/Contents/Resources/codex`, `/Applications/ChatGPT.app/Contents/Resources/codex`, then `PATH`. Settings stores the override as the `codexPath` user-defaults key. Restart after changing it.
+
+Credentials stay managed by Codex. The app-server may update its normal auth cache and logs. The widget discards server stderr to avoid displaying or retaining sensitive server/config details. No API key is needed for the ChatGPT account workflow. API-key-only accounts are not the intended quota source.
+
+Protocol reference: `https://learn.chatgpt.com/docs/app-server`. Installed-version schema inspection is available through `codex app-server generate-json-schema --out <temporary-directory>`; keep generated schemas outside tracked source unless deliberately adopting them.
+
+## Quotas, refresh, and missing data
+
+- Prefer nonempty `rateLimitsByLimitId`; otherwise use legacy `rateLimits`. Preserve every primary/secondary window with a stable bucket/slot ID.
+- Remaining quota is `clamp(100 - usedPercent, 0...100)`. UI usage fill is its complement. These percentages do **not** imply a token allowance.
+- Reset timestamps are Unix seconds. Display absolute times in the user's local timezone, including its identifier.
+- Time-bar fraction is `clamp((resetsAt - now) / (windowDurationMins * 60), 0...1)`. Missing timestamps or nonpositive durations produce no fraction. Its timeline updates every minute. A passed reset never optimistically replenishes quota; wait for the service response.
+- Poll every 60 seconds, refresh on wake, on opening a stale panel, and on manual Refresh. Avoid overlapping refreshes. Failure retries back off from 5 seconds to a 5-minute ceiling.
+- Retain the previous in-memory snapshot during transport failures and visibly mark it stale. Do not persist account usage snapshots to disk.
+- Missing summary metrics are `Unavailable`, not zero. Token activity failures should not discard successful quota responses.
+- Daily bucket keys are matched to `yyyy-MM-dd` in UTC, explicitly labeled because the API does not document a timezone for date-only buckets.
+
+During live diagnosis on September 21, 2026, the service returned daily history ending September 20 and no entry for the current date. This explained the original missing today's value; it was not a transport or decoding failure. This observation is historical, not a guaranteed reporting schedule.
+
+## Last-24-hours fallback
+
+Use the official current-day bucket when present, **including zero**. Only when it is missing, read local token activity and display **Last 24h** with **This Mac · all local Codex sessions**. This source covers local sessions across logins; it is not account-wide usage and excludes other devices. Do not relabel yesterday's daily bucket as a rolling 24-hour total.
+
+`LocalUsageReader` resolves `CODEX_HOME` or defaults to `~/.codex`, and enumerates `sessions` and `archived_sessions`. It considers recently modified regular JSONL files, reads in 64 KiB chunks off the UI thread, and only decodes session metadata and token-counter events. Conversation text is never retained or logged.
+
+Counting rules:
+
+1. Use event timestamps in `(now - 24 hours, now]`; older counter events establish the baseline.
+2. Count increases in cumulative `total_token_usage.total_tokens`; repeated totals contribute nothing.
+3. For initial/reset counters, use the reported last increment, capped by total, rather than counting an inherited cumulative baseline.
+4. Skip known inherited fork history preceding the fork timestamp. Explicit non-OpenAI providers are excluded.
+5. Deduplicate archived/active copies using session ID, timestamp, and cumulative total.
+6. Cached input is already included in total tokens; do not add it again.
+7. Wait for a newline before counting a trailing record that may still be written. Oversized/unreadable records make results partial. Missing directories, or a wholly unreadable zero result, return unavailable rather than a fabricated zero.
+
+Partial totals are labeled in the UI. Local logs are an internal format and may be missing, pruned, or incomplete. The reader rescans qualifying files each refresh rather than maintaining an incremental cache; revisit this if a very large local history affects performance. Default auth and `CODEX_HOME` may differ between Finder and shell launches; do not silently combine directories.
+
+## Testing and verification
+
+There are currently 27 tests covering JSON transport, failures/timeouts, quota calculations, optional metrics, UTC date matching, rolling counters, duplicate archives, inherited fork events, account changes, stale recovery, wake notifications, shutdown, and daily-report precedence.
+
+Store tests inject a fake `CodexServing` client and a local-usage reader; they must not read real account data. Panel tests use sample data in offscreen native `NSHostingView` windows. They assert equal dimensions across all selected tabs and save previews under `.build/previews/panel-{status,usage,stats}-{light,dark}.png`. Use those renders to inspect layout without capturing unrelated desktop content.
+
+Relevant checks:
+
+```sh
+swift test
+swift test --filter PanelRenderTests
+make build
+make check
+codesign --verify --strict "build/Codex Widget.app"
+git diff --check
+```
+
+Run checks appropriate to the change. UI-only changes usually need the render test and a build, not repeated full live reads. Actual menu clicks and physical sleep/resume are separate manual smoke checks; the automated wake test posts the notification. Automated inspection of the Codex app itself was blocked, so styling was based on user-supplied screenshots. Never bypass a desktop capture or app-access restriction.
+
+## Git and maintenance
+
+`.gitignore` excludes Swift/Xcode outputs, app bundles, per-user IDE state, render/test artifacts, logs, local Codex state, and common credential/environment files. Keep source, tests, the Xcode project, plist, Makefile, and documentation tracked. Never commit auth files, rollouts, real account snapshots, or build products.
+
+Before a requested commit/push, inspect status and staged contents, check whitespace, and push the intended branch without force. Preserve unrelated user changes. Documentation-only edits do not require rebuilding the running app. When code changes need a restart, quit this widget and its own helper, build, then open the app bundle; do not run multiple widget copies.
+
+Keep `README.md` as the user-facing quick start and this `agent.md` as the implementation/handoff reference. Update both when behavior or commands change. This filename is explicitly user-requested; it is documentation, not an assumption that every agent runner automatically loads it as `AGENTS.md`.
