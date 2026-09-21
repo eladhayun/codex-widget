@@ -1,0 +1,114 @@
+name: Test and release
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+permissions:
+  contents: read
+
+defaults:
+  run:
+    shell: bash
+
+jobs:
+  test:
+    name: Swift tests
+    runs-on: macos-15
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - name: Run unit and native render tests
+        run: make test
+
+  release:
+    name: Build and publish macOS app
+    needs: test
+    if: github.event_name == 'push'
+    runs-on: macos-15
+    timeout-minutes: 15
+    permissions:
+      contents: write
+    env:
+      GH_TOKEN: ${{ github.token }}
+      GH_REPO: ${{ github.repository }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+          persist-credentials: false
+
+      - name: Set release identity
+        run: |
+          version=$(/usr/libexec/PlistBuddy -c 'Print :CFBundleShortVersionString' Resources/Info.plist)
+          tag="v${version}+build.${GITHUB_RUN_NUMBER}"
+          echo "RELEASE_TAG=$tag" >> "$GITHUB_ENV"
+          echo "ARCHIVE=Codex-Widget-${version}-build.${GITHUB_RUN_NUMBER}-macOS-arm64.zip" >> "$GITHUB_ENV"
+
+      - name: Build, package, and verify
+        run: |
+          test "$(uname -m)" = arm64
+          make build
+          app='build/Codex Widget.app'
+          /usr/libexec/PlistBuddy -c "Set :CFBundleVersion ${GITHUB_RUN_NUMBER}" "$app/Contents/Info.plist"
+          /usr/libexec/PlistBuddy -c "Add :CodexReleaseTag string ${RELEASE_TAG}" "$app/Contents/Info.plist"
+          codesign --force --sign - "$app"
+          codesign --verify --strict "$app"
+          mkdir -p build/release-assets
+          ditto -c -k --sequesterRsrc --keepParent "$app" "build/release-assets/$ARCHIVE"
+          cd build/release-assets
+          shasum -a 256 "$ARCHIVE" > SHA256SUMS.txt
+          unzip -t "$ARCHIVE"
+          ditto -x -k "$ARCHIVE" verify
+          codesign --verify --strict 'verify/Codex Widget.app'
+          test "$(/usr/libexec/PlistBuddy -c 'Print :CodexReleaseTag' 'verify/Codex Widget.app/Contents/Info.plist')" = "$RELEASE_TAG"
+
+      - name: Write release changelog
+        run: |
+          previous=$(git describe --tags --abbrev=0 --match 'v*' "${GITHUB_SHA}^" 2>/dev/null || true)
+          range="$GITHUB_SHA"
+          if [[ -n "$previous" ]]; then
+            range="${previous}..${GITHUB_SHA}"
+          fi
+          {
+            printf '# Codex Widget %s\n\n' "$RELEASE_TAG"
+            printf '## Changes\n\n'
+            git log --reverse --format='- %s (%h)' "$range"
+            if [[ -n "$previous" ]]; then
+              printf '\n[Full diff](https://github.com/%s/compare/%s...%s)\n' "$GH_REPO" "$previous" "$RELEASE_TAG"
+            fi
+            printf '\n## Installation\n\n'
+            # shellcheck disable=SC2016
+            printf 'Download `%s`, extract it, and drag **Codex Widget.app** to **Applications**. Open it and look for the terminal icon in the menu bar.\n\n' "$ARCHIVE"
+            printf 'Requires **macOS 14+**, **Apple Silicon**, and an existing signed-in Codex installation. This build is ad-hoc signed and **not notarized**. If macOS blocks it, use **System Settings → Privacy & Security → Open Anyway** after attempting to open the app, if you trust the download.\n\n'
+            # shellcheck disable=SC2016
+            printf 'To verify the download, place `SHA256SUMS.txt` beside the ZIP and run `shasum -a 256 -c SHA256SUMS.txt`.\n'
+          } > build/release-assets/CHANGELOG.md
+
+      - name: Publish release
+        run: |
+          # Re-running a successful workflow must not replace a published release.
+          if gh release view "$RELEASE_TAG" --json isDraft > build/existing-release.json 2>/dev/null; then
+            if [[ "$(jq -r .isDraft build/existing-release.json)" == false ]]; then
+              echo "Release $RELEASE_TAG is already published."
+              exit 0
+            fi
+          else
+            gh release create "$RELEASE_TAG" --target "$GITHUB_SHA" \
+              --title "Codex Widget $RELEASE_TAG" \
+              --notes-file build/release-assets/CHANGELOG.md --draft
+          fi
+          gh release upload "$RELEASE_TAG" \
+            "build/release-assets/$ARCHIVE" \
+            build/release-assets/SHA256SUMS.txt \
+            build/release-assets/CHANGELOG.md --clobber
+          # An older push finishing later must not replace the newest download.
+          latest=false
+          if [[ "$(gh api "repos/$GH_REPO/commits/main" --jq .sha)" == "$GITHUB_SHA" ]]; then
+            latest=true
+          fi
+          gh release edit "$RELEASE_TAG" --draft=false --latest="$latest"

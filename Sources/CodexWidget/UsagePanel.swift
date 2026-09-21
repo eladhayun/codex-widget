@@ -85,9 +85,15 @@ struct UsagePanel: View {
         .task { await store.refreshIfNeeded() }
     }
 
+    private var appVersion: String {
+        Bundle.main.object(forInfoDictionaryKey: "CodexReleaseTag") as? String
+            ?? Bundle.main.object(forInfoDictionaryKey: "CFBundleShortVersionString") as? String
+            ?? "Development"
+    }
+
     private var statusContent: some View {
         VStack(alignment: .leading, spacing: 9) {
-            field("Version:", "0.1.0")
+            field("Version:", appVersion)
             field("Connection:", store.refreshing ? "Refreshing…" : store.stale ? "Waiting for update" : "Connected", color: store.stale ? TerminalStyle.orange : .green)
             field("Login method:", store.account?.type == "chatgpt" ? "ChatGPT account" : store.account?.type ?? "Not signed in")
             field("Plan:", store.account?.planType?.capitalized ?? "Unavailable")

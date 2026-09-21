@@ -2,7 +2,19 @@
 
 A native macOS menu bar monitor for your existing ChatGPT-backed Codex account. A terminal icon opens a Claude-inspired dark status panel with monospace text and lavender accents.
 
+An unofficial, community-maintained personal project, not affiliated with or endorsed by OpenAI or Anthropic. Compatibility depends on the installed Codex version and the account data its app-server provides.
+
 See [AGENTS.md](AGENTS.md) for architecture, implementation details, UI requirements, data limitations, and maintenance guidance.
+
+## Download
+
+Get the app ZIP from the [latest GitHub release](https://github.com/eladhayun/codex-widget/releases/latest). Prebuilt downloads require **Apple Silicon and macOS 14+**, plus an existing signed-in Codex installation.
+
+1. Extract the ZIP and drag **Codex Widget.app** to **Applications**.
+2. Open it and click the terminal icon in the menu bar. There is no Dock icon.
+3. If macOS blocks the first launch, use **System Settings → Privacy & Security → Open Anyway** after attempting to open it, if you trust the download. Releases are ad-hoc signed, not notarized.
+
+Each release includes `SHA256SUMS.txt`. Place it beside the downloaded ZIP and run `shasum -a 256 -c SHA256SUMS.txt` to verify the archive. Release notes contain the changelog; automated releases also attach it as `CHANGELOG.md`.
 
 ## Run locally
 
@@ -36,6 +48,14 @@ Refresh occurs every 60 seconds, on wake, on opening a stale panel, or via Refre
 
 Codex is discovered at `/opt/homebrew/bin/codex`, `/usr/local/bin/codex`, the Codex app's bundled executable, or `PATH`. Set a custom executable path in Settings and restart if needed. The app uses the same Codex home/environment as its launched process; Finder launches normally use your default Codex home.
 
+## Automated releases
+
+The [Test and release workflow](.github/workflows/release.yml) runs the full Swift test suite, including native panel renders, for pull requests and every push to `main`. A separate release job runs only after the push's tests pass. It builds on an Apple Silicon macOS runner, packages and verifies the app ZIP, and publishes it with a checksum and changelog.
+
+Tags combine the version in `Resources/Info.plist` with the workflow run number, for example `v0.1.0+build.1`. The app's **Status → Version** displays that exact tag. CI embeds it as `CodexReleaseTag` in the app's plist while keeping the numeric marketing version and bundle build number in the standard macOS keys. Local builds display their plist marketing version; unpackaged SwiftPM runs display `Development`. Every push, including documentation changes, produces a release after successful tests; a failed run can be rerun. Rerunning a published release leaves its assets intact, and an interrupted draft can be completed.
+
+Changelogs list commits since the nearest preceding `v*` tag in the pushed commit's history, with a link to the full diff. Publishing uses GitHub's built-in `GITHUB_TOKEN` with write access only in the release job; no personal token or Apple signing certificate is required. Workflow runs are independent so rapid pushes do not cancel one another.
+
 ## Troubleshooting
 
 - **Sign-in required:** Run `codex login` in Terminal, then Refresh. API-key-only logins do not expose ChatGPT-plan quotas.
@@ -48,3 +68,7 @@ Codex is discovered at `/opt/homebrew/bin/codex`, `/usr/local/bin/codex`, the Co
 Tests cover protocol failures, quota calculations, account changes, stale recovery, wake notifications, shutdown, and native offscreen light/dark renders. The render test uses sample data and writes images to `.build/previews/`; it does not capture the desktop. Actual system sleep/resume and menu-bar clicks still warrant a manual smoke check on your Mac.
 
 Protocol reference: https://learn.chatgpt.com/docs/app-server
+
+## License
+
+[MIT](LICENSE) © 2026 Elad Hayun.

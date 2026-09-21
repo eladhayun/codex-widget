@@ -2,7 +2,7 @@
 
 ## Project and scope
 
-This repository builds a personal native macOS menu bar app that monitors Codex token activity and ChatGPT-plan quotas. Repository: `https://github.com/eladhayun/codex-widget` (private), default branch `main`.
+This repository builds an unofficial, MIT-licensed personal native macOS menu bar app that monitors Codex token activity and ChatGPT-plan quotas. Repository: `https://github.com/eladhayun/codex-widget`, default branch `main`. It is not affiliated with or endorsed by OpenAI or Anthropic.
 
 The app uses the existing local Codex login. It has no backend, API key configuration, model calls, desktop WidgetKit extension, launch-at-login support, or App Store distribution. Do not add these features implicitly when maintaining the monitor.
 
@@ -21,14 +21,14 @@ make open
 ```
 
 - `make test` runs the Swift Package Manager XCTest targets, including offscreen native view renders.
-- `make build` compiles a release executable, assembles `build/Codex Widget.app`, copies `Resources/Info.plist`, and ad-hoc signs it with `codesign --sign -`.
+- `make build` compiles a release executable, assembles `build/Codex Widget.app`, copies `Resources/Info.plist` and the MIT license, and ad-hoc signs it with `codesign --sign -`.
 - `make check` runs the executable's `--check` diagnostic mode. It reads account/usage information without creating a model task. It prints availability, daily bucket dates, and the local rolling total when needed; it does not print account identifiers or credentials.
 - `make open` builds and opens the application. To launch an existing build without recompiling, use `open "build/Codex Widget.app"`.
 
-The installed workspace's absolute launch command is:
+From the repository root, launch the built app with:
 
 ```sh
-open "/path/to/codex-widget/build/Codex Widget.app"
+open "build/Codex Widget.app"
 ```
 
 Double-clicking the bundle in Finder also works. The executable inside `Contents/MacOS/CodexWidget` can run directly, but opening the app bundle is the normal user workflow. Look for the terminal icon in the menu bar; there is no Dock icon (`LSUIElement=true`). Quit from the panel. The app can be copied to Applications manually. It is not notarized.
@@ -65,6 +65,7 @@ The development machine has emitted unrelated CoreSimulator/CoreDevice compatibi
 - Tabs: Status, Usage (initial selection), and Stats.
 - All tab contents participate in a top-aligned `ZStack`; only the selected tab is visible, interactive, enabled, and exposed to accessibility. The largest content sets the panel height, so switching tabs does not resize it. The footer stays in place. Height can respond to changed data, but must not depend on selected tab.
 - Status shows app version, connection, login method, plan, email, last update, and refresh cadence. Do not invent current conversation/session metadata.
+- Status reads the exact release tag from the bundle's `CodexReleaseTag` key, stamped by CI before signing (for example `v0.1.0+build.1`). Local bundles fall back to `CFBundleShortVersionString`; unpackaged runs show `Development`. Keep the standard macOS version keys numeric. CI verifies the tag survives ZIP extraction.
 - Usage shows today's reported tokens or the local last-24-hours fallback, lifetime tokens, and all returned quota windows.
 - Quota bars show **percent used**, not percent remaining. They are rectangular lavender bars, 14 points high, with a 72-point trailing percentage label and a 9-point gap.
 - Weekly windows (`windowDurationMins == 10080`) have a separate **Time until reset** bar. It must match the usage bar's height and width. Its fill is the remaining fraction of the time window, and decreases toward reset. Keep the absolute reset text and relative countdown in addition to the bar.
@@ -143,6 +144,10 @@ git diff --check
 Run checks appropriate to the change. UI-only changes usually need the render test and a build, not repeated full live reads. Actual menu clicks and physical sleep/resume are separate manual smoke checks; the automated wake test posts the notification. Automated inspection of the Codex app itself was blocked, so styling was based on user-supplied screenshots. Never bypass a desktop capture or app-access restriction.
 
 ## Git and maintenance
+
+`.github/workflows/release.yml` tests pull requests and every push to `main` on `macos-15` (arm64). Its release job depends on the full test job and only publishes for pushes. It builds and ad-hoc signs the app, sets `CFBundleVersion` to the workflow run number, verifies the extracted ZIP's signature, and publishes the ZIP, SHA256SUMS.txt, and CHANGELOG.md. Tags use `v<CFBundleShortVersionString>+build.<run_number>`; do not reset or rename the workflow casually because its run counter identifies releases. The source plist is not modified by CI.
+
+Each release changelog lists commits since the nearest preceding ancestor `v*` tag. All pushes, including documentation edits, qualify. Runs are not canceled by newer pushes; only a run still at the tip of main explicitly marks its release latest. Publishing stages assets in a draft before making the release visible, supports retrying drafts, and leaves already-published releases unchanged. Only the release job receives `contents: write`; PR tests have read access and never need Codex credentials. Do not add `make check` to CI because it reads a real login. Validate workflow edits with `actionlint` and relevant local build/test checks.
 
 `.gitignore` excludes Swift/Xcode outputs, app bundles, per-user IDE state, render/test artifacts, logs, local Codex state, and common credential/environment files. Keep source, tests, the Xcode project, plist, Makefile, and documentation tracked. Never commit auth files, rollouts, real account snapshots, or build products.
 

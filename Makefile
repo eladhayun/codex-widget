@@ -11,6 +11,8 @@ build:
 	mkdir -p "build/Codex Widget.app/Contents/MacOS"
 	cp .build/release/CodexWidget "build/Codex Widget.app/Contents/MacOS/CodexWidget"
 	cp Resources/Info.plist "build/Codex Widget.app/Contents/Info.plist"
+	mkdir -p "build/Codex Widget.app/Contents/Resources"
+	cp LICENSE "build/Codex Widget.app/Contents/Resources/LICENSE"
 	codesign --force --sign - "build/Codex Widget.app"
 
 test:
