@@ -86,7 +86,9 @@ struct UsagePanel: View {
     }
 
     private var appVersion: String {
-        Bundle.main.object(forInfoDictionaryKey: "CodexReleaseTag") as? String
+        // Test runners have their own version; only read metadata from our app.
+        guard Bundle.main.bundleIdentifier == "com.eladhayun.codex-widget" else { return "Development" }
+        return Bundle.main.object(forInfoDictionaryKey: "CodexReleaseTag") as? String
             ?? Bundle.main.object(forInfoDictionaryKey: "CFBundleShortVersionString") as? String
             ?? "Development"
     }

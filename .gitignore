@@ -6,6 +6,7 @@ DerivedData/
 *.app/
 *.dSYM/
 *.xcresult/
+*.dmg
 
 # Per-user IDE and macOS state
 .DS_Store

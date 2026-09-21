@@ -19,7 +19,7 @@ jobs:
     runs-on: macos-15
     timeout-minutes: 15
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v6
         with:
           persist-credentials: false
       - name: Run unit and native render tests
@@ -37,7 +37,7 @@ jobs:
       GH_TOKEN: ${{ github.token }}
       GH_REPO: ${{ github.repository }}
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v6
         with:
           fetch-depth: 0
           persist-credentials: false
@@ -47,7 +47,10 @@ jobs:
           version=$(/usr/libexec/PlistBuddy -c 'Print :CFBundleShortVersionString' Resources/Info.plist)
           tag="v${version}+build.${GITHUB_RUN_NUMBER}"
           echo "RELEASE_TAG=$tag" >> "$GITHUB_ENV"
-          echo "ARCHIVE=Codex-Widget-${version}-build.${GITHUB_RUN_NUMBER}-macOS-arm64.zip" >> "$GITHUB_ENV"
+          echo "ARCHIVE=Codex-Widget-${version}-build.${GITHUB_RUN_NUMBER}-macOS-arm64.dmg" >> "$GITHUB_ENV"
+
+      - name: Install DMG packaging tools
+        run: make dmg-tools
 
       - name: Build, package, and verify
         run: |
@@ -59,13 +62,9 @@ jobs:
           codesign --force --sign - "$app"
           codesign --verify --strict "$app"
           mkdir -p build/release-assets
-          ditto -c -k --sequesterRsrc --keepParent "$app" "build/release-assets/$ARCHIVE"
+          bash scripts/package-dmg.sh "$app" "build/release-assets/$ARCHIVE"
           cd build/release-assets
           shasum -a 256 "$ARCHIVE" > SHA256SUMS.txt
-          unzip -t "$ARCHIVE"
-          ditto -x -k "$ARCHIVE" verify
-          codesign --verify --strict 'verify/Codex Widget.app'
-          test "$(/usr/libexec/PlistBuddy -c 'Print :CodexReleaseTag' 'verify/Codex Widget.app/Contents/Info.plist')" = "$RELEASE_TAG"
 
       - name: Write release changelog
         run: |
@@ -83,10 +82,10 @@ jobs:
             fi
             printf '\n## Installation\n\n'
             # shellcheck disable=SC2016
-            printf 'Download `%s`, extract it, and drag **Codex Widget.app** to **Applications**. Open it and look for the terminal icon in the menu bar.\n\n' "$ARCHIVE"
+            printf 'Download `%s`, open the disk image, and drag **Codex Widget.app** onto the **Applications** shortcut. Eject the disk image after copying. Open the app from Applications and look for the terminal icon in the menu bar.\n\n' "$ARCHIVE"
             printf 'Requires **macOS 14+**, **Apple Silicon**, and an existing signed-in Codex installation. This build is ad-hoc signed and **not notarized**. If macOS blocks it, use **System Settings → Privacy & Security → Open Anyway** after attempting to open the app, if you trust the download.\n\n'
             # shellcheck disable=SC2016
-            printf 'To verify the download, place `SHA256SUMS.txt` beside the ZIP and run `shasum -a 256 -c SHA256SUMS.txt`.\n'
+            printf 'To verify the download, place `SHA256SUMS.txt` beside the DMG and run `shasum -a 256 -c SHA256SUMS.txt`.\n'
           } > build/release-assets/CHANGELOG.md
 
       - name: Publish release

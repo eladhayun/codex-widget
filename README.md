@@ -1,3 +1,5 @@
+<p align="center"><img src="Resources/AppIcon.png" width="128" alt="Codex Widget app icon"></p>
+
 # Codex Widget
 
 A native macOS menu bar monitor for your existing ChatGPT-backed Codex account. A terminal icon opens a Claude-inspired dark status panel with monospace text and lavender accents.
@@ -8,13 +10,29 @@ See [AGENTS.md](AGENTS.md) for architecture, implementation details, UI requirem
 
 ## Download
 
-Get the app ZIP from the [latest GitHub release](https://github.com/eladhayun/codex-widget/releases/latest). Prebuilt downloads require **Apple Silicon and macOS 14+**, plus an existing signed-in Codex installation.
+Get the app DMG from the [latest GitHub release](https://github.com/eladhayun/codex-widget/releases/latest). Prebuilt downloads require **Apple Silicon and macOS 14+**, plus an existing signed-in Codex installation.
 
-1. Extract the ZIP and drag **Codex Widget.app** to **Applications**.
-2. Open it and click the terminal icon in the menu bar. There is no Dock icon.
-3. If macOS blocks the first launch, use **System Settings → Privacy & Security → Open Anyway** after attempting to open it, if you trust the download. Releases are ad-hoc signed, not notarized.
+1. Open the DMG and drag **Codex Widget.app** onto the **Applications** shortcut.
+2. Eject the disk image after copying.
+3. Open it from Applications and click the terminal icon in the menu bar. There is no Dock icon.
+4. If macOS blocks the first launch, use **System Settings → Privacy & Security → Open Anyway** after attempting to open it, if you trust the download. Releases are ad-hoc signed, not notarized.
 
-Each release includes `SHA256SUMS.txt`. Place it beside the downloaded ZIP and run `shasum -a 256 -c SHA256SUMS.txt` to verify the archive. Release notes contain the changelog; automated releases also attach it as `CHANGELOG.md`.
+Each release includes `SHA256SUMS.txt`. Place it beside the downloaded DMG and run `shasum -a 256 -c SHA256SUMS.txt` to verify the disk image. Release notes contain the changelog; automated releases also attach it as `CHANGELOG.md`.
+
+## Screenshots
+
+Actual native panel renders using fictional sample data; no real account information is shown.
+
+| Usage | Stats |
+| --- | --- |
+| <img src="docs/screenshots/usage.png" width="440" alt="Usage tab with token totals, quota usage, and reset countdowns"> | <img src="docs/screenshots/stats.png" width="440" alt="Stats tab with daily activity and lifetime metrics"> |
+
+<details>
+<summary>Status tab</summary>
+
+<img src="docs/screenshots/status.png" width="440" alt="Status tab with a fictional account and connection details">
+
+</details>
 
 ## Run locally
 
@@ -48,9 +66,18 @@ Refresh occurs every 60 seconds, on wake, on opening a stale panel, or via Refre
 
 Codex is discovered at `/opt/homebrew/bin/codex`, `/usr/local/bin/codex`, the Codex app's bundled executable, or `PATH`. Set a custom executable path in Settings and restart if needed. The app uses the same Codex home/environment as its launched process; Finder launches normally use your default Codex home.
 
+## Build a disk image
+
+```sh
+make dmg-tools  # One-time setup of pinned Python packaging tools in build/
+make dmg        # Builds build/Codex-Widget.dmg
+```
+
+The compressed disk image includes the app, an Applications shortcut, and a custom Finder layout. It verifies the mounted app's signature, icon, license, and shortcut before completing. `make assets` regenerates the original icon and installer artwork with AppKit; `make screenshots` refreshes the sample-data README images. Both SwiftPM and Xcode builds include the icon and MIT license.
+
 ## Automated releases
 
-The [Test and release workflow](.github/workflows/release.yml) runs the full Swift test suite, including native panel renders, for pull requests and every push to `main`. A separate release job runs only after the push's tests pass. It builds on an Apple Silicon macOS runner, packages and verifies the app ZIP, and publishes it with a checksum and changelog.
+The [Test and release workflow](.github/workflows/release.yml) runs the full Swift test suite, including native panel renders, for pull requests and every push to `main`. A separate release job runs only after the push's tests pass. It builds on an Apple Silicon macOS runner, packages and verifies a drag-to-Applications DMG, and publishes it with a checksum and changelog.
 
 Tags combine the version in `Resources/Info.plist` with the workflow run number, for example `v0.1.0+build.1`. The app's **Status → Version** displays that exact tag. CI embeds it as `CodexReleaseTag` in the app's plist while keeping the numeric marketing version and bundle build number in the standard macOS keys. Local builds display their plist marketing version; unpackaged SwiftPM runs display `Development`. Every push, including documentation changes, produces a release after successful tests; a failed run can be rerun. Rerunning a published release leaves its assets intact, and an interrupted draft can be completed.
 

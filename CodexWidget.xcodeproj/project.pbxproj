@@ -5,10 +5,10 @@
 	objectVersion = 77;
 	objects = {
 		A00000000000000000000001 = {isa = PBXProject; attributes = {LastUpgradeCheck = 2700;}; buildConfigurationList = A00000000000000000000008; compatibilityVersion = "Xcode 16.0"; developmentRegion = en; hasScannedForEncodings = 0; knownRegions = (en, Base); mainGroup = A00000000000000000000002; preferredProjectObjectVersion = 77; productRefGroup = A00000000000000000000003; projectDirPath = ""; projectRoot = ""; targets = (A00000000000000000000005);};
-		A00000000000000000000002 = {isa = PBXGroup; children = (A00000000000000000000004, A00000000000000000000003); sourceTree = "<group>";};
+		A00000000000000000000002 = {isa = PBXGroup; children = (A00000000000000000000004, A00000000000000000000014, A00000000000000000000015, A00000000000000000000003); sourceTree = "<group>";};
 		A00000000000000000000003 = {isa = PBXGroup; children = (A00000000000000000000006); name = Products; sourceTree = "<group>";};
 		A00000000000000000000004 = {isa = PBXFileSystemSynchronizedRootGroup; path = Sources; sourceTree = "<group>";};
-		A00000000000000000000005 = {isa = PBXNativeTarget; buildConfigurationList = A00000000000000000000009; buildPhases = (A00000000000000000000007); buildRules = (); dependencies = (); fileSystemSynchronizedGroups = (A00000000000000000000004); name = CodexWidget; productName = CodexWidget; productReference = A00000000000000000000006; productType = "com.apple.product-type.application";};
+		A00000000000000000000005 = {isa = PBXNativeTarget; buildConfigurationList = A00000000000000000000009; buildPhases = (A00000000000000000000007, A00000000000000000000016); buildRules = (); dependencies = (); fileSystemSynchronizedGroups = (A00000000000000000000004); name = CodexWidget; productName = CodexWidget; productReference = A00000000000000000000006; productType = "com.apple.product-type.application";};
 		A00000000000000000000006 = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = "Codex Widget.app"; sourceTree = BUILT_PRODUCTS_DIR;};
 		A00000000000000000000007 = {isa = PBXSourcesBuildPhase; buildActionMask = 2147483647; files = (); runOnlyForDeploymentPostprocessing = 0;};
 		A00000000000000000000008 = {isa = XCConfigurationList; buildConfigurations = (A00000000000000000000010, A00000000000000000000011); defaultConfigurationIsVisible = 0; defaultConfigurationName = Release;};
@@ -17,6 +17,11 @@
 		A00000000000000000000011 = {isa = XCBuildConfiguration; buildSettings = {MACOSX_DEPLOYMENT_TARGET = 14.0; SDKROOT = macosx; SWIFT_VERSION = 5.0;}; name = Release;};
 		A00000000000000000000012 = {isa = XCBuildConfiguration; buildSettings = {CODE_SIGN_IDENTITY = "-"; CODE_SIGN_STYLE = Manual; ENABLE_APP_SANDBOX = NO; GENERATE_INFOPLIST_FILE = NO; INFOPLIST_FILE = Resources/Info.plist; PRODUCT_BUNDLE_IDENTIFIER = "com.eladhayun.codex-widget"; PRODUCT_NAME = "Codex Widget"; EXECUTABLE_NAME = CodexWidget; SWIFT_OPTIMIZATION_LEVEL = "-Onone";}; name = Debug;};
 		A00000000000000000000013 = {isa = XCBuildConfiguration; buildSettings = {CODE_SIGN_IDENTITY = "-"; CODE_SIGN_STYLE = Manual; ENABLE_APP_SANDBOX = NO; GENERATE_INFOPLIST_FILE = NO; INFOPLIST_FILE = Resources/Info.plist; PRODUCT_BUNDLE_IDENTIFIER = "com.eladhayun.codex-widget"; PRODUCT_NAME = "Codex Widget"; EXECUTABLE_NAME = CodexWidget; SWIFT_OPTIMIZATION_LEVEL = "-O";}; name = Release;};
+		A00000000000000000000014 = {isa = PBXFileReference; lastKnownFileType = image.icns; path = Resources/AppIcon.icns; sourceTree = "<group>";};
+		A00000000000000000000015 = {isa = PBXFileReference; lastKnownFileType = text; path = LICENSE; sourceTree = "<group>";};
+		A00000000000000000000016 = {isa = PBXResourcesBuildPhase; buildActionMask = 2147483647; files = (A00000000000000000000017, A00000000000000000000018); runOnlyForDeploymentPostprocessing = 0;};
+		A00000000000000000000017 = {isa = PBXBuildFile; fileRef = A00000000000000000000014;};
+		A00000000000000000000018 = {isa = PBXBuildFile; fileRef = A00000000000000000000015;};
 	};
 	rootObject = A00000000000000000000001;
 }
