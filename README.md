@@ -19,6 +19,16 @@ Get the app DMG from the [latest GitHub release](https://github.com/eladhayun/co
 
 Each release includes `SHA256SUMS.txt`. Place it beside the downloaded DMG and run `shasum -a 256 -c SHA256SUMS.txt` to verify the disk image. Release notes contain the changelog; automated releases also attach it as `CHANGELOG.md`.
 
+## Homebrew
+
+```sh
+brew install --cask eladhayun/tap/codex-widget
+```
+
+Open **Codex Widget** from Applications after installation. Requires Apple Silicon, macOS 14+, and an existing Codex login. The same macOS first-launch approval described above applies.
+
+To update, quit the widget, run `brew update && brew upgrade --cask codex-widget`, then reopen it. Each successful release automatically updates [the tap](https://github.com/eladhayun/homebrew-tap). Uninstall with `brew uninstall --cask codex-widget`; optional `--zap` also removes widget preferences, never Codex credentials or session history.
+
 ## Screenshots
 
 Actual native panel renders using fictional sample data; no real account information is shown.

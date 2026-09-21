@@ -26,3 +26,7 @@ auth.json
 *.pem
 *.p12
 *.mobileprovision
+
+# Python helper caches
+__pycache__/
+*.py[cod]

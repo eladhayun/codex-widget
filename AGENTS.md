@@ -169,3 +169,7 @@ Each release changelog lists commits since the nearest preceding ancestor `v*` t
 Before a requested commit/push, inspect status and staged contents, check whitespace, and push the intended branch without force. Preserve unrelated user changes. Documentation-only edits do not require rebuilding the running app. When code changes need a restart, quit this widget and its own helper, build, then open the app bundle; do not run multiple widget copies.
 
 Keep `README.md` as the user-facing quick start and this `AGENTS.md` as the implementation/handoff reference and repository guidance for coding agents. Update both when behavior or commands change.
+
+## Homebrew distribution
+
+`eladhayun/homebrew-tap` provides `brew install --cask eladhayun/tap/codex-widget`. The release workflow's dependent `homebrew` job runs `scripts/update-homebrew.py` against GitHub's latest published release, validates the downloaded DMG against SHA256SUMS and the asset digest, validates the cask, and pushes only its cask file. Updates serialize to avoid competing tap pushes. `HOMEBREW_TAP_DEPLOY_KEY` is an Actions secret holding a write deploy key scoped exclusively to the tap; never put it in source or logs. Rotate by replacing the tap deploy key and the app repository secret. Cask versions use `marketingVersion,build` so each automated build can upgrade. The cask requires arm64 and macOS 14+, keeps Gatekeeper enabled, and only zaps the widget preferences.

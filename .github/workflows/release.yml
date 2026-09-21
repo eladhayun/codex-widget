@@ -24,6 +24,8 @@ jobs:
           persist-credentials: false
       - name: Run unit and native render tests
         run: make test
+      - name: Test Homebrew updater
+        run: python3 -m unittest discover -s scripts -p 'test_*.py'
 
   release:
     name: Build and publish macOS app
@@ -83,6 +85,7 @@ jobs:
             printf '\n## Installation\n\n'
             # shellcheck disable=SC2016
             printf 'Download `%s`, open the disk image, and drag **Codex Widget.app** onto the **Applications** shortcut. Eject the disk image after copying. Open the app from Applications and look for the terminal icon in the menu bar.\n\n' "$ARCHIVE"
+            printf 'Homebrew: `brew install --cask eladhayun/tap/codex-widget` (the tap updates after this release is published).\n\n'
             printf 'Requires **macOS 14+**, **Apple Silicon**, and an existing signed-in Codex installation. This build is ad-hoc signed and **not notarized**. If macOS blocks it, use **System Settings → Privacy & Security → Open Anyway** after attempting to open the app, if you trust the download.\n\n'
             # shellcheck disable=SC2016
             printf 'To verify the download, place `SHA256SUMS.txt` beside the DMG and run `shasum -a 256 -c SHA256SUMS.txt`.\n'
@@ -111,3 +114,41 @@ jobs:
             latest=true
           fi
           gh release edit "$RELEASE_TAG" --draft=false --latest="$latest"
+
+  homebrew:
+    name: Update Homebrew tap
+    needs: release
+    runs-on: macos-15
+    concurrency:
+      group: homebrew-tap
+      cancel-in-progress: false
+    env:
+      GH_TOKEN: ${{ github.token }}
+      HOMEBREW_NO_AUTO_UPDATE: 1
+      HOMEBREW_NO_ANALYTICS: 1
+    steps:
+      - uses: actions/checkout@v6
+        with:
+          persist-credentials: false
+      - uses: actions/checkout@v6
+        with:
+          repository: eladhayun/homebrew-tap
+          path: homebrew-tap
+          ssh-key: ${{ secrets.HOMEBREW_TAP_DEPLOY_KEY }}
+      - name: Generate and validate cask
+        run: |
+          # Always sync GitHub's latest release, even when an older run finishes later.
+          python3 scripts/update-homebrew.py homebrew-tap/Casks/codex-widget.rb
+          ruby -c homebrew-tap/Casks/codex-widget.rb
+          brew tap eladhayun/tap "$GITHUB_WORKSPACE/homebrew-tap"
+          brew style --cask eladhayun/tap/codex-widget
+          brew fetch --cask eladhayun/tap/codex-widget
+      - name: Publish cask update
+        working-directory: homebrew-tap
+        run: |
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git add Casks/codex-widget.rb
+          if git diff --cached --quiet; then exit 0; fi
+          git commit -m "Update Codex Widget cask to latest release"
+          git push origin HEAD:main
