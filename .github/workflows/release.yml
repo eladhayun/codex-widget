@@ -141,6 +141,8 @@ jobs:
           python3 scripts/update-homebrew.py homebrew-tap/Casks/codex-widget.rb
           ruby -c homebrew-tap/Casks/codex-widget.rb
           brew tap eladhayun/tap "$GITHUB_WORKSPACE/homebrew-tap"
+          # A local clone only includes committed files; validate the newly generated cask.
+          cp homebrew-tap/Casks/codex-widget.rb "$(brew --repository eladhayun/tap)/Casks/codex-widget.rb"
           brew style --cask eladhayun/tap/codex-widget
           brew fetch --cask eladhayun/tap/codex-widget
       - name: Publish cask update
