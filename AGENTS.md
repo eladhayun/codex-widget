@@ -4,7 +4,7 @@
 
 This repository builds an unofficial, MIT-licensed personal native macOS menu bar app that monitors Codex token activity and ChatGPT-plan quotas. Repository: `https://github.com/eladhayun/codex-widget`, default branch `main`. It is not affiliated with or endorsed by OpenAI or Anthropic.
 
-The app uses the existing local Codex login. It has no backend, API key configuration, model calls, desktop WidgetKit extension, launch-at-login support, or App Store distribution. Do not add these features implicitly when maintaining the monitor.
+The app uses the existing local Codex login. It has no backend, API key configuration, model calls, desktop WidgetKit extension, or App Store distribution. Do not add these features implicitly when maintaining the monitor.
 
 The user explicitly chose a menu bar app for their own Mac. Later design requests replaced the original text status item with an icon and adopted the supplied Claude terminal screenshots as a visual reference. It still monitors **Codex**, not Claude.
 
@@ -73,6 +73,10 @@ The development machine has emitted unrelated CoreSimulator/CoreDevice compatibi
 - Stats shows a 26-week daily UTC activity grid plus lifetime tokens, peak daily tokens, longest turn, and streaks when supplied. Hover text distinguishes missing reports from reported zero. Do not invent model breakdowns, session counts, costs, or other Claude-specific fields from the reference screenshots.
 - Refresh, Settings, and Quit remain available in the footer.
 
+## Open at login
+
+Settings provides an opt-in **Open at login** toggle backed by `SMAppService.mainApp` (ServiceManagement). `LoginItemSettings.swift` reads macOS registration status rather than persisting an independent Boolean. It handles pending approval with an Open Login Items button, displays failures without falsely changing state, and reloads status when Settings opens or the app becomes active. Registration only occurs when the user changes the toggle; do not automatically enable it during development or tests. Recommend installing in Applications first. This starts the app at user login, including after a restart, not before login. Tests and native renders inject fake service closures and must never register real login items.
+
 ## Account data and transport
 
 The app launches its own `codex app-server --stdio` child process and exchanges newline-delimited JSON over pipes. It sends `initialize` with client metadata, then `initialized`, before issuing account requests.
@@ -126,7 +130,7 @@ Partial totals are labeled in the UI. Local logs are an internal format and may 
 
 ## Testing and verification
 
-There are currently 31 tests covering JSON transport, failures/timeouts, quota calculations, optional metrics, UTC date matching, rolling counters, duplicate archives, inherited fork events, account changes, stale recovery, wake notifications, shutdown, and daily-report precedence.
+There are currently 34 tests covering JSON transport, failures/timeouts, quota calculations, optional metrics, UTC date matching, rolling counters, duplicate archives, inherited fork events, account changes, stale recovery, wake notifications, shutdown, and daily-report precedence.
 
 Store tests inject a fake `CodexServing` client and a local-usage reader; they must not read real account data. Panel tests use sample data in offscreen native `NSHostingView` windows. They assert equal dimensions across all selected tabs and save previews under `.build/previews/panel-{status,usage,stats}-{light,dark}.png`. Use those renders to inspect layout without capturing unrelated desktop content.
 

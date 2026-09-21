@@ -61,7 +61,7 @@ final class PanelRenderTests: XCTestCase {
             try png.write(to: directory.appendingPathComponent("panel-\(tab.rawValue.lowercased())-\(appearance).png"))
           }
         }
-        let settings = NSHostingView(rootView: SettingsView(store: store)
+        let settings = NSHostingView(rootView: SettingsView(store: store, loginItem: LoginItemSettings(readStatus: { .notRegistered }, register: {}, unregister: {}))
             .defaultAppStorage(defaults).environment(\.colorScheme, .light).background(Color.white))
         let settingsSize = settings.fittingSize
         let settingsWindow = NSWindow(contentRect: NSRect(origin: .zero, size: settingsSize),

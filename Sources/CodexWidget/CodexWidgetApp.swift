@@ -66,12 +66,36 @@ struct CodexWidgetApp: App {
 }
 
 
-struct SettingsView: View {
+@MainActor struct SettingsView: View {
     @ObservedObject var store: UsageStore
     @AppStorage("codexPath") private var path = ""
+    @StateObject private var loginItem: LoginItemSettings
+
+    init(store: UsageStore, loginItem: LoginItemSettings? = nil) {
+        self.store = store
+        _loginItem = StateObject(wrappedValue: loginItem ?? LoginItemSettings())
+    }
+
     var body: some View {
         Form {
             Text("Uses your existing Codex login. Run codex login in Terminal if you need to sign in.")
+            Toggle("Open at login", isOn: Binding(
+                get: { loginItem.isRequested }, set: { loginItem.setEnabled($0) }))
+            Text("Start automatically when you sign in to your Mac, including after a restart.")
+                .font(.caption).foregroundStyle(.secondary)
+            if loginItem.status == .requiresApproval {
+                Text("Allow Codex Widget in System Settings → General → Login Items to finish enabling this.")
+                    .font(.caption).foregroundStyle(.secondary)
+                Button("Open Login Items") { loginItem.openSystemSettings() }
+            }
+            if loginItem.status == .notFound {
+                Text("Install Codex Widget in Applications and open it there to set up automatic startup.")
+                    .font(.caption).foregroundStyle(.secondary)
+            }
+            if let error = loginItem.error {
+                Text(error).font(.caption).foregroundStyle(.red)
+                    .fixedSize(horizontal: false, vertical: true)
+            }
             Picker("Refresh interval", selection: $store.refreshInterval) {
                 ForEach(RefreshInterval.allCases, id: \.self) { interval in
                     Text(interval.label).tag(interval)
@@ -83,5 +107,9 @@ struct SettingsView: View {
             Text("Leave empty to auto-detect. Restart Codex Widget after changing this path.")
                 .font(.caption).foregroundStyle(.secondary)
         }.padding(24).frame(width: 450)
+            .onAppear { loginItem.reload() }
+            .onReceive(NotificationCenter.default.publisher(for: NSApplication.didBecomeActiveNotification)) { _ in
+                loginItem.reload()
+            }
     }
 }
