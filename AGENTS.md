@@ -61,7 +61,7 @@ The development machine has emitted unrelated CoreSimulator/CoreDevice compatibi
 ## UI requirements to preserve
 
 - Menu bar: a monochrome `terminal` SF Symbol only. Do not put quota numbers or usage text back in the menu bar label.
-- Panel: 440-point width, dark terminal background, monospace type, lavender top rule and selected tabs. It intentionally remains dark in light and dark macOS appearances.
+- Panel: 440-point width, monospace type, adaptive purple/lavender top rule and selected tabs. Settings offers Auto (follows macOS), Light, and Dark, persisted as `appearance`. The panel uses a lightly tinted native material with rounded corners; Reduce Transparency or Increase Contrast makes it opaque. Keep text and bars fully opaque and readable in both themes.
 - Tabs: Status, Usage (initial selection), and Stats.
 - All tab contents participate in a top-aligned `ZStack`; only the selected tab is visible, interactive, enabled, and exposed to accessibility. The largest content sets the panel height, so switching tabs does not resize it. The footer stays in place. Height can respond to changed data, but must not depend on selected tab.
 - Status shows app version, connection, login method, plan, email, last update, and refresh cadence. Do not invent current conversation/session metadata.
@@ -130,7 +130,7 @@ Partial totals are labeled in the UI. Local logs are an internal format and may 
 
 ## Testing and verification
 
-There are currently 34 tests covering JSON transport, failures/timeouts, quota calculations, optional metrics, UTC date matching, rolling counters, duplicate archives, inherited fork events, account changes, stale recovery, wake notifications, shutdown, and daily-report precedence.
+There are currently 35 tests covering JSON transport, failures/timeouts, quota calculations, optional metrics, UTC date matching, rolling counters, duplicate archives, inherited fork events, account changes, stale recovery, wake notifications, shutdown, daily-report precedence, and appearance persistence. Native renders cover Auto/Light/Dark against both system themes and high-contrast appearances.
 
 Store tests inject a fake `CodexServing` client and a local-usage reader; they must not read real account data. Panel tests use sample data in offscreen native `NSHostingView` windows. They assert equal dimensions across all selected tabs and save previews under `.build/previews/panel-{status,usage,stats}-{light,dark}.png`. Use those renders to inspect layout without capturing unrelated desktop content.
 
@@ -153,7 +153,7 @@ Run checks appropriate to the change. UI-only changes usually need the render te
 - `scripts/render-assets.swift` is the editable AppKit vector source for the icon and installer background. `make assets` regenerates the tracked PNG/ICNS assets; no image service or API key is needed.
 - Run `make dmg-tools` once to install pinned `dmgbuild`, `ds-store`, and `mac-alias` into `build/dmg-tools`. `make dmg` builds `build/Codex-Widget.dmg`; override `DMG_PATH` or `DMGBUILD` as needed.
 - `scripts/package-dmg.sh` and `scripts/dmg-settings.py` create a compressed read-only HFS+ image with a custom Finder background, positioned icons, and `/Applications` symlink. No Finder automation is required. The script mounts the final image read-only, verifies its signature, icon, license, shortcut, and optional release tag, then detaches it. CI installs these tools before packaging. New releases distribute DMGs instead of ZIPs; historical ZIP releases remain available.
-- `make screenshots` renders fictional account data using `PanelRenderTests` and copies the three dark panel PNGs and Settings image into `docs/screenshots/`. Inspect them before committing. Never use real account screenshots for public documentation.
+- `make screenshots` renders fictional account data using `PanelRenderTests` and copies the three dark panel PNGs, light Usage panel, and Settings image into `docs/screenshots/`. Inspect them before committing. Never use real account screenshots for public documentation.
 - `scripts/set-dmg-icon.swift` applies the app icon to the DMG file itself with NSWorkspace; this extended metadata only persists locally or through metadata-preserving copies. Direct GitHub/HTTP downloads lose that file icon. The mounted volume icon is embedded and independently verified against AppIcon.icns. Do not claim that a bare HTTP-downloaded DMG retains a custom Finder file icon.
 - These builds are still ad-hoc signed and unnotarized. Developer ID distribution would require the owner's signing identity and notarization credentials; do not claim it is enabled.
 

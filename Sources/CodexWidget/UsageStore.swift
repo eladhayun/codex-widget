@@ -13,6 +13,19 @@ enum RefreshInterval: Int, CaseIterable {
     }
 }
 
+enum AppAppearance: String, CaseIterable {
+    case auto, light, dark
+
+    var label: String { rawValue.capitalized }
+    var colorScheme: ColorScheme? {
+        switch self {
+        case .auto: nil
+        case .light: .light
+        case .dark: .dark
+        }
+    }
+}
+
 @MainActor final class UsageStore: ObservableObject {
     @Published var account: AccountResponse.Account?
     @Published var limits: RateLimitsResponse?
@@ -22,6 +35,9 @@ enum RefreshInterval: Int, CaseIterable {
     @Published var updatedAt: Date?
     @Published var error: String?
     @Published var tokenMessage: String?
+    @Published var appearance: AppAppearance {
+        didSet { defaults.set(appearance.rawValue, forKey: "appearance") }
+    }
     @Published var refreshing = false
     @Published var stale = true
     @Published var refreshInterval: RefreshInterval {
@@ -49,6 +65,7 @@ enum RefreshInterval: Int, CaseIterable {
         self.client = client ?? CodexClient()
         self.defaults = defaults
         self.sleep = sleep
+        self.appearance = AppAppearance(rawValue: defaults.string(forKey: "appearance") ?? "") ?? .auto
         self.refreshInterval = RefreshInterval(rawValue: defaults.integer(forKey: "refreshIntervalSeconds")) ?? .oneMinute
         self.readLocalUsage = readLocalUsage
     }

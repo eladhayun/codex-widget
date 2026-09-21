@@ -2,7 +2,7 @@
 
 # Codex Widget
 
-A native macOS menu bar monitor for your existing ChatGPT-backed Codex account. A terminal icon opens a Claude-inspired dark status panel with monospace text and lavender accents.
+A native macOS menu bar monitor for your existing ChatGPT-backed Codex account. A terminal icon opens a terminal-inspired status panel with monospace text and lavender accents.
 
 An unofficial, community-maintained personal project, not affiliated with or endorsed by OpenAI or Anthropic. Compatibility depends on the installed Codex version and the account data its app-server provides.
 
@@ -37,9 +37,13 @@ Actual native panel renders using fictional sample data; no real account informa
 <details>
 <summary>Settings</summary>
 
-<img src="docs/screenshots/settings.png" width="450" alt="Settings with Open at login, a configurable refresh interval, and Codex executable path">
+<img src="docs/screenshots/settings.png" width="450" alt="Settings with Open at login, appearance, refresh interval, and Codex executable path">
 
 </details>
+
+Light appearance (Auto also follows the system):
+
+<img src="docs/screenshots/usage-light.png" width="440" alt="Usage panel in light appearance with purple quota bars">
 
 ## Run locally
 
@@ -63,7 +67,7 @@ The menu bar shows only a monochrome terminal icon. The panel has three tabs:
 - **Usage** (default): Account token totals and each quota window, with percentage **used**, lavender bars, and reset times in your local timezone. Weekly windows also include a separate time-remaining bar that decreases toward reset, updated every minute.
 - **Stats:** A 26-week UTC daily-token activity grid, lifetime tokens, peak daily tokens, longest turn, and streaks when Codex supplies them. Hover a day for its value; missing days are not assumed to be zero.
 
-The panel intentionally retains the reference's dark appearance in both macOS themes, with purple accents throughout Stats. Token counts are separate activity metrics, not a token-based quota allowance. Date-only daily buckets are matched to UTC and labeled explicitly; the upstream API does not specify a timezone. Missing metrics show **Unavailable**, not zero.
+Settings → **Appearance** offers **Auto**, **Light**, and **Dark**. Auto follows macOS; a manual choice applies immediately and is remembered. The panel uses a subtle translucent native material with adaptive purple accents. Reduce Transparency and Increase Contrast use an opaque background for readability. Token counts are separate activity metrics, not a token-based quota allowance. Date-only daily buckets are matched to UTC and labeled explicitly; the upstream API does not specify a timezone. Missing metrics show **Unavailable**, not zero.
 
 When today's bucket is absent, the panel falls back to **Last 24h**, labeled **This Mac · all local Codex sessions**. This is a rolling total from timestamped OpenAI token-counter events in `CODEX_HOME/sessions` and `archived_sessions` (default `~/.codex`). It includes local sessions across logins, not usage from other devices; it is not the account-wide daily report. Cached input tokens are already included in the reported total and are not added again. The reader processes changed files off the UI thread, deduplicates archived copies, ignores repeated counters and inherited fork history, and never retains or logs conversation text. Partial reads are labeled. If local records are absent, the app keeps **Not reported yet** or **Unavailable**. A returned daily report, including a reported zero, takes priority over the fallback.
 

@@ -47,6 +47,7 @@ screenshots:
 	TZ=UTC swift test --filter PanelRenderTests
 	mkdir -p docs/screenshots
 	cp .build/previews/panel-usage-dark.png docs/screenshots/usage.png
+	cp .build/previews/panel-usage-light.png docs/screenshots/usage-light.png
 	cp .build/previews/panel-stats-dark.png docs/screenshots/stats.png
 	cp .build/previews/panel-status-dark.png docs/screenshots/status.png
 	cp .build/previews/settings.png docs/screenshots/settings.png

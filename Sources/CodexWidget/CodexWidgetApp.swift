@@ -83,19 +83,30 @@ struct CodexWidgetApp: App {
                 get: { loginItem.isRequested }, set: { loginItem.setEnabled($0) }))
             Text("Start automatically when you sign in to your Mac, including after a restart.")
                 .font(.caption).foregroundStyle(.secondary)
+                .fixedSize(horizontal: false, vertical: true)
             if loginItem.status == .requiresApproval {
                 Text("Allow Codex Widget in System Settings → General → Login Items to finish enabling this.")
                     .font(.caption).foregroundStyle(.secondary)
+                .fixedSize(horizontal: false, vertical: true)
                 Button("Open Login Items") { loginItem.openSystemSettings() }
             }
             if loginItem.status == .notFound {
                 Text("Install Codex Widget in Applications and open it there to set up automatic startup.")
                     .font(.caption).foregroundStyle(.secondary)
+                .fixedSize(horizontal: false, vertical: true)
             }
             if let error = loginItem.error {
                 Text(error).font(.caption).foregroundStyle(.red)
                     .fixedSize(horizontal: false, vertical: true)
             }
+            Picker("Appearance", selection: $store.appearance) {
+                ForEach(AppAppearance.allCases, id: \.self) { appearance in
+                    Text(appearance.label).tag(appearance)
+                }
+            }
+            Text("Auto follows your Mac’s Light or Dark appearance.")
+                .font(.caption).foregroundStyle(.secondary)
+                .fixedSize(horizontal: false, vertical: true)
             Picker("Refresh interval", selection: $store.refreshInterval) {
                 ForEach(RefreshInterval.allCases, id: \.self) { interval in
                     Text(interval.label).tag(interval)
@@ -103,10 +114,13 @@ struct CodexWidgetApp: App {
             }
             Text("Changes apply immediately. Manual refresh and refresh on wake remain available.")
                 .font(.caption).foregroundStyle(.secondary)
+                .fixedSize(horizontal: false, vertical: true)
             TextField("Codex executable", text: $path, prompt: Text("Auto-detect"))
             Text("Leave empty to auto-detect. Restart Codex Widget after changing this path.")
                 .font(.caption).foregroundStyle(.secondary)
+                .fixedSize(horizontal: false, vertical: true)
         }.padding(24).frame(width: 450)
+            .preferredColorScheme(store.appearance.colorScheme)
             .onAppear { loginItem.reload() }
             .onReceive(NotificationCenter.default.publisher(for: NSApplication.didBecomeActiveNotification)) { _ in
                 loginItem.reload()

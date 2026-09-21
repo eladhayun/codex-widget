@@ -38,29 +38,41 @@ final class PanelRenderTests: XCTestCase {
         let directory = root.appendingPathComponent(".build/previews")
         try FileManager.default.createDirectory(at: directory, withIntermediateDirectories: true)
         var panelSize: CGSize?
-        for tab in PanelTab.allCases {
-          for scheme in [ColorScheme.light, .dark] {
-            let host = NSHostingView(rootView: UsagePanel(store: store, initialTab: tab)
-                .background(scheme == .dark ? Color(red: 0.12, green: 0.12, blue: 0.13) : .white)
-                .environment(\.colorScheme, scheme))
-            let size = host.fittingSize
-            if let panelSize {
-                XCTAssertEqual(size.height, panelSize.height, accuracy: 0.5, "Switching tabs must not resize the panel")
-            } else { panelSize = size }
-            let window = NSWindow(contentRect: NSRect(origin: .zero, size: size), styleMask: .borderless, backing: .buffered, defer: false)
-            window.contentView = host
-            window.appearance = NSAppearance(named: scheme == .dark ? .darkAqua : .aqua)
-            host.layoutSubtreeIfNeeded()
-            RunLoop.main.run(until: Date().addingTimeInterval(0.1))
-            let bitmap = try XCTUnwrap(host.bitmapImageRepForCachingDisplay(in: host.bounds))
-            host.cacheDisplay(in: host.bounds, to: bitmap)
-            XCTAssertGreaterThan(bitmap.pixelsHigh, 400)
-            XCTAssertEqual(size.width, 440)
-            let png = try XCTUnwrap(bitmap.representation(using: .png, properties: [:]))
-            let appearance = scheme == .dark ? "dark" : "light"
-            try png.write(to: directory.appendingPathComponent("panel-\(tab.rawValue.lowercased())-\(appearance).png"))
-          }
+        for mode in AppAppearance.allCases {
+            store.appearance = mode
+            for highContrast in [false, true] {
+                for tab in PanelTab.allCases {
+                    for scheme in [ColorScheme.light, .dark] {
+                        let host = NSHostingView(rootView: UsagePanel(store: store, initialTab: tab)
+                            .background(scheme == .dark ? Color(red: 0.12, green: 0.12, blue: 0.13) : .white)
+                            .environment(\.colorScheme, scheme))
+                        let size = host.fittingSize
+                        if let panelSize {
+                            XCTAssertEqual(size.height, panelSize.height, accuracy: 0.5, "Switching tabs must not resize the panel")
+                        } else { panelSize = size }
+                        let window = NSWindow(contentRect: NSRect(origin: .zero, size: size), styleMask: .borderless, backing: .buffered, defer: false)
+                        window.contentView = host
+                        window.appearance = NSAppearance(named: highContrast
+                            ? (scheme == .dark ? .accessibilityHighContrastDarkAqua : .accessibilityHighContrastAqua)
+                            : (scheme == .dark ? .darkAqua : .aqua))
+                        host.layoutSubtreeIfNeeded()
+                        RunLoop.main.run(until: Date().addingTimeInterval(0.1))
+                        let bitmap = try XCTUnwrap(host.bitmapImageRepForCachingDisplay(in: host.bounds))
+                        host.cacheDisplay(in: host.bounds, to: bitmap)
+                        XCTAssertGreaterThan(bitmap.pixelsHigh, 400)
+                        XCTAssertEqual(size.width, 440)
+                        let background = try XCTUnwrap(bitmap.colorAt(x: 20, y: 60)?.usingColorSpace(.deviceRGB))
+                        let isDark = (mode.colorScheme ?? scheme) == .dark
+                        XCTAssertEqual(background.redComponent < 0.5, isDark, "Background must honor \(mode) on \(scheme)")
+                        let png = try XCTUnwrap(bitmap.representation(using: .png, properties: [:]))
+                        let appearance = scheme == .dark ? "dark" : "light"
+                        let suffix = mode == .auto && !highContrast ? "" : "-\(mode.rawValue)-\(highContrast ? "contrast" : "glass")"
+                        try png.write(to: directory.appendingPathComponent("panel-\(tab.rawValue.lowercased())-\(appearance)\(suffix).png"))
+                    }
+                }
+            }
         }
+        store.appearance = .auto
         let settings = NSHostingView(rootView: SettingsView(store: store, loginItem: LoginItemSettings(readStatus: { .notRegistered }, register: {}, unregister: {}))
             .defaultAppStorage(defaults).environment(\.colorScheme, .light).background(Color.white))
         let settingsSize = settings.fittingSize
