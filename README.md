@@ -55,7 +55,7 @@ make build
 open "build/Codex Widget.app"
 ```
 
-Alternatively open `CodexWidget.xcodeproj` in Xcode and run the CodexWidget target. Tests run through `make test` (Swift Package Manager). The app is locally ad-hoc signed and does not need an Apple developer account. It has no Dock icon: click the **terminal icon** in your menu bar to open its status panel. Click Quit in the panel to exit. Enable **Settings → Open at login** to start automatically when you sign in after a restart. It is off by default. macOS may require approval under **System Settings → General → Login Items**; the app provides a button to open that page when needed. Install the app in Applications before enabling it.
+Alternatively open `CodexWidget.xcodeproj` in Xcode and run the CodexWidget target. Tests run through `make test` (Swift Package Manager). The app is locally ad-hoc signed and does not need an Apple developer account. It has no Dock icon: click the **terminal icon** in your menu bar to open its status panel. Settings brings its window to the front with keyboard focus. Click Quit in the panel to exit. Enable **Settings → Open at login** to start automatically when you sign in after a restart. It is off by default. macOS may require approval under **System Settings → General → Login Items**; the app provides a button to open that page when needed. Install the app in Applications before enabling it.
 
 ## How it works
 

@@ -22,6 +22,7 @@ private struct TerminalStyle {
 struct UsagePanel: View {
     @ObservedObject var store: UsageStore
     @State private var tab: PanelTab
+    @Environment(\.openSettings) private var openSettings
     @Environment(\.colorScheme) private var systemScheme
     @Environment(\.colorSchemeContrast) private var contrast
     @Environment(\.accessibilityReduceTransparency) private var reduceTransparency
@@ -81,7 +82,7 @@ struct UsagePanel: View {
                 Button { Task { await store.refresh() } } label: {
                     Text(store.refreshing ? "Refreshing…" : "↻ Refresh")
                 }.disabled(store.refreshing)
-                SettingsLink { Text("Settings") }
+                Button("Settings") { SettingsWindowFocus.open { openSettings() } }
                 Spacer()
                 if store.stale { Text("Stale").foregroundStyle(style.orange) }
                 Button("Quit") { NSApp.terminate(nil) }

@@ -71,7 +71,7 @@ The development machine has emitted unrelated CoreSimulator/CoreDevice compatibi
 - Weekly windows (`windowDurationMins == 10080`) have a separate **Time until reset** bar. It must match the usage bar's height and width. Its fill is the remaining fraction of the time window, and decreases toward reset. Keep the absolute reset text and relative countdown in addition to the bar.
 - Stats uses purple/lavender consistently for the Overview highlight, activity grid, legend, All time label, and metric values. Orange remains a warning color, not a Stats accent.
 - Stats shows a 26-week daily UTC activity grid plus lifetime tokens, peak daily tokens, longest turn, and streaks when supplied. Hover text distinguishes missing reports from reported zero. Do not invent model breakdowns, session counts, costs, or other Claude-specific fields from the reference screenshots.
-- Refresh, Settings, and Quit remain available in the footer.
+- Refresh, Settings, and Quit remain available in the footer. Settings activates the accessory app and focuses its tracked Settings window through `SettingsWindowFocus`; keep this working both on first open and when reopening an existing window.
 
 ## Open at login
 

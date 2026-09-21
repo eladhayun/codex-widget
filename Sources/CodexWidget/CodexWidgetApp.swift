@@ -120,6 +120,7 @@ struct CodexWidgetApp: App {
                 .font(.caption).foregroundStyle(.secondary)
                 .fixedSize(horizontal: false, vertical: true)
         }.padding(24).frame(width: 450)
+            .background(SettingsWindowReader())
             .preferredColorScheme(store.appearance.colorScheme)
             .onAppear { loginItem.reload() }
             .onReceive(NotificationCenter.default.publisher(for: NSApplication.didBecomeActiveNotification)) { _ in
