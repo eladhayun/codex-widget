@@ -2,7 +2,7 @@
 
 A native macOS menu bar monitor for your existing ChatGPT-backed Codex account. A terminal icon opens a Claude-inspired dark status panel with monospace text and lavender accents.
 
-See [agent.md](agent.md) for architecture, implementation details, UI requirements, data limitations, and maintenance guidance.
+See [AGENTS.md](AGENTS.md) for architecture, implementation details, UI requirements, data limitations, and maintenance guidance.
 
 ## Run locally
 

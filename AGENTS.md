@@ -148,4 +148,4 @@ Run checks appropriate to the change. UI-only changes usually need the render te
 
 Before a requested commit/push, inspect status and staged contents, check whitespace, and push the intended branch without force. Preserve unrelated user changes. Documentation-only edits do not require rebuilding the running app. When code changes need a restart, quit this widget and its own helper, build, then open the app bundle; do not run multiple widget copies.
 
-Keep `README.md` as the user-facing quick start and this `agent.md` as the implementation/handoff reference. Update both when behavior or commands change. This filename is explicitly user-requested; it is documentation, not an assumption that every agent runner automatically loads it as `AGENTS.md`.
+Keep `README.md` as the user-facing quick start and this `AGENTS.md` as the implementation/handoff reference and repository guidance for coding agents. Update both when behavior or commands change.
