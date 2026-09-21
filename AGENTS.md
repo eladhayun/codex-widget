@@ -62,6 +62,7 @@ The development machine has emitted unrelated CoreSimulator/CoreDevice compatibi
 
 - Menu bar: a monochrome `terminal` SF Symbol only. Do not put quota numbers or usage text back in the menu bar label.
 - Panel: 440-point width, monospace type, adaptive purple/lavender top rule and selected tabs. Settings offers Auto (follows macOS), Light, and Dark, persisted as `appearance`. The panel uses a lightly tinted native material with rounded corners; Reduce Transparency or Increase Contrast makes it opaque. Keep text and bars fully opaque and readable in both themes.
+- Header: left-aligned “Codex Widget” on its own row above the tabs, over a subtle drifting star field. Decorative stars do not intercept input or appear in accessibility; Reduce Motion freezes them, and animation pauses while hidden.
 - Tabs: Status, Usage (initial selection), and Stats.
 - All tab contents participate in a top-aligned `ZStack`; only the selected tab is visible, interactive, enabled, and exposed to accessibility. The largest content sets the panel height, so switching tabs does not resize it. The footer stays in place. Height can respond to changed data, but must not depend on selected tab.
 - Status shows app version, connection, login method, plan, email, last update, and refresh cadence. Do not invent current conversation/session metadata.

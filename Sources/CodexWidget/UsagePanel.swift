@@ -40,8 +40,9 @@ struct UsagePanel: View {
     var body: some View {
         VStack(alignment: .leading, spacing: 0) {
             Rectangle().fill(style.lavender).frame(height: 2)
+            StarfieldHeader(color: style.lavender)
+                .padding(.top, 10).padding(.bottom, 10)
             HStack(spacing: 14) {
-                Text("Codex").fontWeight(.bold).foregroundStyle(style.lavender)
                 ForEach(PanelTab.allCases, id: \.self) { item in
                     Button { tab = item } label: {
                         Text(item.rawValue).fontWeight(tab == item ? .bold : .regular)
@@ -52,7 +53,7 @@ struct UsagePanel: View {
                     .accessibilityAddTraits(tab == item ? .isSelected : [])
                 }
                 Spacer(minLength: 0)
-            }.font(.system(size: 13, design: .monospaced)).padding(.bottom, 23).padding(.top, 18)
+            }.font(.system(size: 13, design: .monospaced)).padding(.bottom, 23)
 
             if let error = store.error {
                 Text(error).foregroundStyle(style.orange).padding(.bottom, 16)

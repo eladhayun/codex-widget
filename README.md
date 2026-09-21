@@ -2,7 +2,7 @@
 
 # Codex Widget
 
-A native macOS menu bar monitor for your existing ChatGPT-backed Codex account. A terminal icon opens a terminal-inspired status panel with monospace text and lavender accents.
+A native macOS menu bar monitor for your existing ChatGPT-backed Codex account. A terminal icon opens a terminal-inspired status panel with monospace text and lavender accents. A separate **Codex Widget** title sits above the tabs over a subtle animated star field; Reduce Motion keeps the stars still.
 
 An unofficial, community-maintained personal project, not affiliated with or endorsed by OpenAI or Anthropic. Compatibility depends on the installed Codex version and the account data its app-server provides.
 
