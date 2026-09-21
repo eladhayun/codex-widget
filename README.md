@@ -8,6 +8,29 @@ An unofficial, community-maintained personal project, not affiliated with or end
 
 See [AGENTS.md](AGENTS.md) for architecture, implementation details, UI requirements, data limitations, and maintenance guidance.
 
+## Install with Homebrew
+
+With [Homebrew](https://brew.sh) installed, run:
+
+```sh
+brew install --cask eladhayun/tap/codex-widget
+open "/Applications/Codex Widget.app"
+```
+
+The command adds [the tap](https://github.com/eladhayun/homebrew-tap) automatically. Requires **Apple Silicon, macOS 14+**, and an existing signed-in Codex installation. Look for the terminal icon in the menu bar; there is no Dock icon.
+
+If macOS blocks the first launch, use **System Settings → Privacy & Security → Open Anyway** after attempting to open the app, if you trust it. Releases are ad-hoc signed, not notarized.
+
+To update, quit the widget, then run:
+
+```sh
+brew update
+brew upgrade --cask codex-widget
+open "/Applications/Codex Widget.app"
+```
+
+Each successful release automatically updates the tap. Uninstall with `brew uninstall --cask codex-widget`; optional `--zap` also removes widget preferences, never Codex credentials or session history.
+
 ## Download
 
 Get the app DMG from the [latest GitHub release](https://github.com/eladhayun/codex-widget/releases/latest). Prebuilt downloads require **Apple Silicon and macOS 14+**, plus an existing signed-in Codex installation.
@@ -18,16 +41,6 @@ Get the app DMG from the [latest GitHub release](https://github.com/eladhayun/co
 4. If macOS blocks the first launch, use **System Settings → Privacy & Security → Open Anyway** after attempting to open it, if you trust the download. Releases are ad-hoc signed, not notarized.
 
 Each release includes `SHA256SUMS.txt`. Place it beside the downloaded DMG and run `shasum -a 256 -c SHA256SUMS.txt` to verify the disk image. Release notes contain the changelog; automated releases also attach it as `CHANGELOG.md`.
-
-## Homebrew
-
-```sh
-brew install --cask eladhayun/tap/codex-widget
-```
-
-Open **Codex Widget** from Applications after installation. Requires Apple Silicon, macOS 14+, and an existing Codex login. The same macOS first-launch approval described above applies.
-
-To update, quit the widget, run `brew update && brew upgrade --cask codex-widget`, then reopen it. Each successful release automatically updates [the tap](https://github.com/eladhayun/homebrew-tap). Uninstall with `brew uninstall --cask codex-widget`; optional `--zap` also removes widget preferences, never Codex credentials or session history.
 
 ## Screenshots
 
