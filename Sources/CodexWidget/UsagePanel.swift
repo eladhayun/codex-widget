@@ -101,7 +101,7 @@ struct UsagePanel: View {
             field("Plan:", store.account?.planType?.capitalized ?? "Unavailable")
             field("Email:", store.account?.email ?? "Unavailable")
             field("Updated:", store.updatedAt?.formatted(date: .abbreviated, time: .shortened) ?? "Not yet")
-            field("Refresh:", "Every 60 seconds")
+            field("Refresh:", "Every \(store.refreshInterval.label)")
             Text("Account-wide Codex usage").foregroundStyle(TerminalStyle.lavender).padding(.top, 16)
             Text("Session details belong to individual Codex conversations.")
                 .foregroundStyle(TerminalStyle.muted).fixedSize(horizontal: false, vertical: true)

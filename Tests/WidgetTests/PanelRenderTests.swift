@@ -7,7 +7,10 @@ import UsageCore
 final class PanelRenderTests: XCTestCase {
     @MainActor func testPanelRendersInBothAppearances() throws {
         _ = NSApplication.shared
-        let store = UsageStore()
+        let suiteName = "CodexWidgetRenderTests.\(UUID().uuidString)"
+        let defaults = UserDefaults(suiteName: suiteName)!
+        defer { defaults.removePersistentDomain(forName: suiteName) }
+        let store = UsageStore(defaults: defaults)
         let decoder = JSONDecoder()
         let now = Date()
         let shortReset = Int(now.addingTimeInterval(3 * 3600).timeIntervalSince1970)
@@ -58,5 +61,18 @@ final class PanelRenderTests: XCTestCase {
             try png.write(to: directory.appendingPathComponent("panel-\(tab.rawValue.lowercased())-\(appearance).png"))
           }
         }
+        let settings = NSHostingView(rootView: SettingsView(store: store)
+            .defaultAppStorage(defaults).environment(\.colorScheme, .light).background(Color.white))
+        let settingsSize = settings.fittingSize
+        let settingsWindow = NSWindow(contentRect: NSRect(origin: .zero, size: settingsSize),
+            styleMask: .borderless, backing: .buffered, defer: false)
+        settingsWindow.contentView = settings
+        settingsWindow.appearance = NSAppearance(named: .aqua)
+        settings.layoutSubtreeIfNeeded()
+        let settingsBitmap = try XCTUnwrap(settings.bitmapImageRepForCachingDisplay(in: settings.bounds))
+        settings.cacheDisplay(in: settings.bounds, to: settingsBitmap)
+        XCTAssertEqual(settingsSize.width, 450)
+        let settingsPNG = try XCTUnwrap(settingsBitmap.representation(using: .png, properties: [:]))
+        try settingsPNG.write(to: directory.appendingPathComponent("settings.png"))
     }
 }

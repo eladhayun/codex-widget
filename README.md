@@ -34,6 +34,13 @@ Actual native panel renders using fictional sample data; no real account informa
 
 </details>
 
+<details>
+<summary>Settings</summary>
+
+<img src="docs/screenshots/settings.png" width="450" alt="Settings with a configurable refresh interval and Codex executable path">
+
+</details>
+
 ## Run locally
 
 Requires macOS 14+, Xcode 16+ or Swift 5.9+, and the Codex CLI signed in with `codex login`.
@@ -62,7 +69,7 @@ When today's bucket is absent, the panel falls back to **Last 24h**, labeled **T
 
 Session costs, model breakdowns, and Claude-specific fields are not synthesized from Codex account data.
 
-Refresh occurs every 60 seconds, on wake, on opening a stale panel, or via Refresh. Quota notifications trigger a full refresh. Errors retain the last successful snapshot with a stale marker and retries back off from 5 seconds to 5 minutes. An account change clears the previous account's data. Past reset times do not optimistically refill the quota.
+Choose a refresh interval in Settings: 15 or 30 seconds, or 1, 2, 5, or 15 minutes. The default is 1 minute. Changes are saved and reschedule polling immediately without restarting; an in-flight refresh completes first. The Status tab shows the selected cadence. Refresh also occurs on wake, on opening a stale panel, or via Refresh. Quota notifications trigger a full refresh. Errors retain the last successful snapshot with a stale marker and retries back off from 5 seconds to 5 minutes. An account change clears the previous account's data. Past reset times do not optimistically refill the quota.
 
 Codex is discovered at `/opt/homebrew/bin/codex`, `/usr/local/bin/codex`, the Codex app's bundled executable, or `PATH`. Set a custom executable path in Settings and restart if needed. The app uses the same Codex home/environment as its launched process; Finder launches normally use your default Codex home.
 
@@ -73,7 +80,7 @@ make dmg-tools  # One-time setup of pinned Python packaging tools in build/
 make dmg        # Builds build/Codex-Widget.dmg
 ```
 
-The compressed disk image includes the app, an Applications shortcut, and a custom Finder layout. It verifies the mounted app's signature, icon, license, and shortcut before completing. `make assets` regenerates the original icon and installer artwork with AppKit; `make screenshots` refreshes the sample-data README images. Both SwiftPM and Xcode builds include the icon and MIT license.
+The compressed disk image includes the app, an Applications shortcut, and a custom Finder layout. The mounted volume carries the app icon. Local DMG files also receive a custom Finder icon, but that file metadata is not preserved by direct GitHub downloads; the downloaded file may display the standard DMG icon until opened. It verifies the mounted app's signature, icon, license, and shortcut before completing. `make assets` regenerates the original icon and installer artwork with AppKit; `make screenshots` refreshes the sample-data README images. Both SwiftPM and Xcode builds include the icon and MIT license.
 
 ## Automated releases
 

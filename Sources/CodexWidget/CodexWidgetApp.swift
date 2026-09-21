@@ -61,18 +61,26 @@ struct CodexWidgetApp: App {
                 .accessibilityLabel("Codex status")
         }
             .menuBarExtraStyle(.window)
-        Settings { SettingsView() }
+        Settings { SettingsView(store: delegate.store) }
     }
 }
 
 
 struct SettingsView: View {
+    @ObservedObject var store: UsageStore
     @AppStorage("codexPath") private var path = ""
     var body: some View {
         Form {
             Text("Uses your existing Codex login. Run codex login in Terminal if you need to sign in.")
+            Picker("Refresh interval", selection: $store.refreshInterval) {
+                ForEach(RefreshInterval.allCases, id: \.self) { interval in
+                    Text(interval.label).tag(interval)
+                }
+            }
+            Text("Changes apply immediately. Manual refresh and refresh on wake remain available.")
+                .font(.caption).foregroundStyle(.secondary)
             TextField("Codex executable", text: $path, prompt: Text("Auto-detect"))
-            Text("Leave empty to auto-detect. Restart Codex Widget after changing this path. Usage refreshes every 60 seconds while running.")
+            Text("Leave empty to auto-detect. Restart Codex Widget after changing this path.")
                 .font(.caption).foregroundStyle(.secondary)
         }.padding(24).frame(width: 450)
     }

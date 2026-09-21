@@ -4,6 +4,15 @@ import SwiftUI
 import UsageCore
 #endif
 
+enum RefreshInterval: Int, CaseIterable {
+    case fifteenSeconds = 15, thirtySeconds = 30, oneMinute = 60
+    case twoMinutes = 120, fiveMinutes = 300, fifteenMinutes = 900
+
+    var label: String {
+        rawValue < 60 ? "\(rawValue) seconds" : rawValue == 60 ? "1 minute" : "\(rawValue / 60) minutes"
+    }
+}
+
 @MainActor final class UsageStore: ObservableObject {
     @Published var account: AccountResponse.Account?
     @Published var limits: RateLimitsResponse?
@@ -15,19 +24,38 @@ import UsageCore
     @Published var tokenMessage: String?
     @Published var refreshing = false
     @Published var stale = true
+    @Published var refreshInterval: RefreshInterval {
+        didSet {
+            defaults.set(refreshInterval.rawValue, forKey: "refreshIntervalSeconds")
+            scheduleNextRefresh()
+        }
+    }
     let client: any CodexServing
     private var loop: Task<Void, Never>?
+    private var running = false
+    private let defaults: UserDefaults
+    private let sleep: (TimeInterval) async throws -> Void
     private var failures = 0
     private var accountRevision = 0
     private var observers: [NSObjectProtocol] = []
     private let readLocalUsage: () async -> LocalUsageSnapshot?
 
-    init(client: (any CodexServing)? = nil, readLocalUsage: @escaping () async -> LocalUsageSnapshot? = { await LocalUsageReader.read() }) {
+    init(client: (any CodexServing)? = nil,
+         defaults: UserDefaults = .standard,
+         sleep: @escaping (TimeInterval) async throws -> Void = { delay in
+             try await Task.sleep(nanoseconds: UInt64(delay * 1_000_000_000))
+         },
+         readLocalUsage: @escaping () async -> LocalUsageSnapshot? = { await LocalUsageReader.read() }) {
         self.client = client ?? CodexClient()
+        self.defaults = defaults
+        self.sleep = sleep
+        self.refreshInterval = RefreshInterval(rawValue: defaults.integer(forKey: "refreshIntervalSeconds")) ?? .oneMinute
         self.readLocalUsage = readLocalUsage
     }
 
     func start() {
+        guard !running else { return }
+        running = true
         client.onDisconnect = { [weak self] in
             self?.stale = true
             self?.error = CodexError.disconnected.localizedDescription
@@ -47,26 +75,41 @@ import UsageCore
         observers.append(NSWorkspace.shared.notificationCenter.addObserver(forName: NSWorkspace.didWakeNotification, object: nil, queue: .main) { [weak self] _ in
             Task { @MainActor in await self?.refresh() }
         })
+        Task { [weak self] in
+            guard self?.running == true else { return }
+            await self?.refresh()
+        }
+    }
+
+    private func scheduleNextRefresh() {
+        // Do not cancel an in-flight read when Settings changes. Its completion
+        // schedules the next poll using the latest interval.
+        guard running, !refreshing else { return }
+        loop?.cancel()
+        let delay = failures == 0 ? Double(refreshInterval.rawValue)
+            : min(300, 5 * pow(2, Double(min(failures - 1, 6))))
+        let sleep = self.sleep
         loop = Task { [weak self] in
-            while !Task.isCancelled {
-                await self?.refresh()
-                let delay = self.map { $0.failures == 0 ? 60.0 : min(300, 5 * pow(2, Double(min($0.failures - 1, 6)))) } ?? 60
-                do { try await Task.sleep(nanoseconds: UInt64(delay * 1_000_000_000)) } catch { return }
-            }
+            do { try await sleep(delay) } catch { return }
+            guard !Task.isCancelled else { return }
+            await self?.refresh()
         }
     }
 
     func refreshIfNeeded() async {
-        if stale || updatedAt.map({ Date().timeIntervalSince($0) >= 60 }) ?? true { await refresh() }
+        if stale || updatedAt.map({ Date().timeIntervalSince($0) >= Double(refreshInterval.rawValue) }) ?? true { await refresh() }
     }
 
     func refresh() async {
         guard !refreshing else { return }
         refreshing = true
-        defer { refreshing = false }
+        defer {
+            refreshing = false
+            scheduleNextRefresh()
+        }
         let revision = accountRevision
         do {
-            try await client.connect(path: UserDefaults.standard.string(forKey: "codexPath"))
+            try await client.connect(path: defaults.string(forKey: "codexPath"))
             let response = try await client.read("account/read", as: AccountResponse.self)
             guard revision == accountRevision else { return }
             if account?.identity != response.account?.identity {
@@ -102,6 +145,7 @@ import UsageCore
     }
 
     func stop() {
+        running = false
         loop?.cancel()
         loop = nil
         observers.forEach { NSWorkspace.shared.notificationCenter.removeObserver($0) }

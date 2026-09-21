@@ -13,6 +13,7 @@ import UsageCore
     var failTokens = false
     var accountReads = 0
     var todayTokens: Int64?
+    var beforeLimits: (() async -> Void)?
     func connect(path: String?) async throws { connected = true }
     func stop() { connected = false }
     func read<T: Decodable>(_ method: String, as type: T.Type) async throws -> T {
@@ -22,6 +23,7 @@ import UsageCore
             accountReads += 1
             json = signedOut ? #"{"account":null}"# : "{\"account\":{\"type\":\"chatgpt\",\"email\":\"\(email)\",\"planType\":\"plus\"}}"
         case "account/rateLimits/read":
+            await beforeLimits?()
             if failLimits { throw CodexError.disconnected }
             json = #"{"rateLimits":{"primary":{"usedPercent":20}}}"#
         default:
@@ -36,6 +38,108 @@ import UsageCore
 }
 
 final class UsageStoreTests: XCTestCase {
+    @MainActor private func testDefaults() -> UserDefaults {
+        let name = "CodexWidgetTests.\(UUID().uuidString)"
+        let defaults = UserDefaults(suiteName: name)!
+        addTeardownBlock { defaults.removePersistentDomain(forName: name) }
+        return defaults
+    }
+
+    @MainActor private func waitUntil(_ predicate: () -> Bool) async throws {
+        for _ in 0..<100 {
+            if predicate() { return }
+            try await Task.sleep(nanoseconds: 10_000_000)
+        }
+        XCTFail("Timed out waiting for the refresh scheduler")
+    }
+
+    @MainActor func testRefreshIntervalPersistsAndControlsStaleness() async {
+        let defaults = testDefaults()
+        defaults.set(-1, forKey: "refreshIntervalSeconds")
+        let client = FakeClient()
+        let store = UsageStore(client: client, defaults: defaults, readLocalUsage: { nil })
+        XCTAssertEqual(store.refreshInterval, .oneMinute)
+        store.refreshInterval = .fiveMinutes
+        let restored = UsageStore(client: FakeClient(), defaults: defaults, readLocalUsage: { nil })
+        XCTAssertEqual(restored.refreshInterval, .fiveMinutes)
+        await store.refresh()
+        store.updatedAt = Date().addingTimeInterval(-90)
+        await store.refreshIfNeeded()
+        XCTAssertEqual(client.accountReads, 1)
+        store.refreshInterval = .thirtySeconds
+        await store.refreshIfNeeded()
+        XCTAssertEqual(client.accountReads, 2)
+    }
+
+    @MainActor func testIntervalChangeReschedulesPollingAndPreservesBackoff() async throws {
+        let client = FakeClient()
+        var delays: [TimeInterval] = []
+        let store = UsageStore(client: client, defaults: testDefaults(), sleep: { delay in
+            delays.append(delay)
+            try await Task.sleep(nanoseconds: 3_600_000_000_000)
+        }, readLocalUsage: { nil })
+        store.start()
+        defer { store.stop() }
+        try await waitUntil { delays == [60] }
+        store.refreshInterval = .fifteenMinutes
+        try await waitUntil { delays.last == 900 }
+        XCTAssertEqual(client.accountReads, 1, "Changing settings should reschedule, not start overlapping reads")
+        client.failLimits = true
+        await store.refresh()
+        try await waitUntil { delays.last == 5 }
+        store.refreshInterval = .fifteenSeconds
+        await store.refresh()
+        try await waitUntil { delays.last == 10 }
+        client.failLimits = false
+        await store.refresh()
+        try await waitUntil { delays.last == 15 }
+        store.stop()
+        let sleepsAfterStop = delays.count
+        store.refreshInterval = .twoMinutes
+        await Task.yield()
+        XCTAssertEqual(delays.count, sleepsAfterStop)
+        XCTAssertFalse(client.connected)
+    }
+
+    @MainActor func testPollingContinuesAfterTimerFires() async throws {
+        let client = FakeClient()
+        var sleeps = 0
+        let store = UsageStore(client: client, defaults: testDefaults(), sleep: { _ in
+            sleeps += 1
+            if sleeps == 1 { await Task.yield() }
+            else { try await Task.sleep(nanoseconds: 3_600_000_000_000) }
+        }, readLocalUsage: { nil })
+        store.start()
+        defer { store.stop() }
+        try await waitUntil { sleeps == 2 }
+        XCTAssertEqual(client.accountReads, 2)
+        XCTAssertFalse(store.stale)
+    }
+
+    @MainActor func testIntervalChangeDuringReadWaitsForCompletion() async throws {
+        let client = FakeClient()
+        var delays: [TimeInterval] = []
+        let store = UsageStore(client: client, defaults: testDefaults(), sleep: { delay in
+            delays.append(delay)
+            try await Task.sleep(nanoseconds: 3_600_000_000_000)
+        }, readLocalUsage: { nil })
+        store.start()
+        defer { store.stop() }
+        try await waitUntil { delays.count == 1 }
+        var gate: CheckedContinuation<Void, Never>?
+        client.beforeLimits = { await withCheckedContinuation { gate = $0 } }
+        let refresh = Task { await store.refresh() }
+        try await waitUntil { gate != nil }
+        store.refreshInterval = .twoMinutes
+        await store.refresh() // Must be ignored while the first read is suspended.
+        XCTAssertEqual(client.accountReads, 2)
+        XCTAssertEqual(delays.count, 1)
+        gate?.resume()
+        await refresh.value
+        try await waitUntil { delays.last == 120 }
+        XCTAssertFalse(store.stale)
+    }
+
     @MainActor func testLocalFallbackOnlyWhenTodaysAccountReportIsMissing() async {
         let client = FakeClient()
         var localReads = 0

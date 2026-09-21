@@ -14,6 +14,8 @@ codesign --verify --strict "$app"
 test -f "$app/Contents/Resources/AppIcon.icns"
 mkdir -p "$(dirname "$output")"
 "$dmgbuild" -s "$root/scripts/dmg-settings.py" -D "app=$app" -D "root=$root" 'Codex Widget' "$output"
+swift "$root/scripts/set-dmg-icon.swift" "$root/Resources/AppIcon.icns" "$output"
+xattr -p com.apple.ResourceFork "$output" >/dev/null
 hdiutil verify "$output"
 
 # Verify the distributed bundle, Applications shortcut, artwork, and release tag.
@@ -31,6 +33,7 @@ mounted=true
 codesign --verify --strict "$mount_dir/Codex Widget.app"
 test "$(readlink "$mount_dir/Applications")" = /Applications
 test -f "$mount_dir/.DS_Store"
+cmp "$root/Resources/AppIcon.icns" "$mount_dir/.VolumeIcon.icns"
 cmp "$app/Contents/Resources/AppIcon.icns" "$mount_dir/Codex Widget.app/Contents/Resources/AppIcon.icns"
 cmp "$app/Contents/Resources/LICENSE" "$mount_dir/Codex Widget.app/Contents/Resources/LICENSE"
 if [[ -n "${RELEASE_TAG:-}" ]]; then

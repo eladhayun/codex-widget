@@ -99,7 +99,7 @@ Protocol reference: `https://learn.chatgpt.com/docs/app-server`. Installed-versi
 - Remaining quota is `clamp(100 - usedPercent, 0...100)`. UI usage fill is its complement. These percentages do **not** imply a token allowance.
 - Reset timestamps are Unix seconds. Display absolute times in the user's local timezone, including its identifier.
 - Time-bar fraction is `clamp((resetsAt - now) / (windowDurationMins * 60), 0...1)`. Missing timestamps or nonpositive durations produce no fraction. Its timeline updates every minute. A passed reset never optimistically replenishes quota; wait for the service response.
-- Poll every 60 seconds, refresh on wake, on opening a stale panel, and on manual Refresh. Avoid overlapping refreshes. Failure retries back off from 5 seconds to a 5-minute ceiling.
+- Poll at the saved Settings interval (`refreshIntervalSeconds`): 15/30 seconds or 1/2/5/15 minutes, default 1 minute. Invalid saved values fall back to 1 minute. Interval changes reschedule the next poll immediately without canceling in-flight reads; completed reads schedule using the latest interval. The same interval controls stale-panel age checks. Refresh on wake, on opening a stale panel, and on manual Refresh. Avoid overlapping refreshes. Failure retries back off from 5 seconds to a 5-minute ceiling.
 - Retain the previous in-memory snapshot during transport failures and visibly mark it stale. Do not persist account usage snapshots to disk.
 - Missing summary metrics are `Unavailable`, not zero. Token activity failures should not discard successful quota responses.
 - Daily bucket keys are matched to `yyyy-MM-dd` in UTC, explicitly labeled because the API does not document a timezone for date-only buckets.
@@ -126,7 +126,7 @@ Partial totals are labeled in the UI. Local logs are an internal format and may 
 
 ## Testing and verification
 
-There are currently 27 tests covering JSON transport, failures/timeouts, quota calculations, optional metrics, UTC date matching, rolling counters, duplicate archives, inherited fork events, account changes, stale recovery, wake notifications, shutdown, and daily-report precedence.
+There are currently 31 tests covering JSON transport, failures/timeouts, quota calculations, optional metrics, UTC date matching, rolling counters, duplicate archives, inherited fork events, account changes, stale recovery, wake notifications, shutdown, and daily-report precedence.
 
 Store tests inject a fake `CodexServing` client and a local-usage reader; they must not read real account data. Panel tests use sample data in offscreen native `NSHostingView` windows. They assert equal dimensions across all selected tabs and save previews under `.build/previews/panel-{status,usage,stats}-{light,dark}.png`. Use those renders to inspect layout without capturing unrelated desktop content.
 
@@ -149,7 +149,8 @@ Run checks appropriate to the change. UI-only changes usually need the render te
 - `scripts/render-assets.swift` is the editable AppKit vector source for the icon and installer background. `make assets` regenerates the tracked PNG/ICNS assets; no image service or API key is needed.
 - Run `make dmg-tools` once to install pinned `dmgbuild`, `ds-store`, and `mac-alias` into `build/dmg-tools`. `make dmg` builds `build/Codex-Widget.dmg`; override `DMG_PATH` or `DMGBUILD` as needed.
 - `scripts/package-dmg.sh` and `scripts/dmg-settings.py` create a compressed read-only HFS+ image with a custom Finder background, positioned icons, and `/Applications` symlink. No Finder automation is required. The script mounts the final image read-only, verifies its signature, icon, license, shortcut, and optional release tag, then detaches it. CI installs these tools before packaging. New releases distribute DMGs instead of ZIPs; historical ZIP releases remain available.
-- `make screenshots` renders fictional account data using `PanelRenderTests` and copies the three dark panel PNGs into `docs/screenshots/`. Inspect them before committing. Never use real account screenshots for public documentation.
+- `make screenshots` renders fictional account data using `PanelRenderTests` and copies the three dark panel PNGs and Settings image into `docs/screenshots/`. Inspect them before committing. Never use real account screenshots for public documentation.
+- `scripts/set-dmg-icon.swift` applies the app icon to the DMG file itself with NSWorkspace; this extended metadata only persists locally or through metadata-preserving copies. Direct GitHub/HTTP downloads lose that file icon. The mounted volume icon is embedded and independently verified against AppIcon.icns. Do not claim that a bare HTTP-downloaded DMG retains a custom Finder file icon.
 - These builds are still ad-hoc signed and unnotarized. Developer ID distribution would require the owner's signing identity and notarization credentials; do not claim it is enabled.
 
 ## Git and maintenance
